@@ -12,7 +12,7 @@ import api, { hasBase } from '../api.js';
 import * as store from '../store.js';
 
 const filters = { q: '', status: 'ALL' };
-const STATUSES = ['ALL', 'PENDING', 'CONFIRMED', 'PACKED', 'DELIVERED', 'CANCELLED'];
+const STATUSES = ['ALL', 'CONFIRMED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PAID', 'CANCELLED'];
 
 function itemsSummary(order) {
   const items = order.items || [];
@@ -323,7 +323,7 @@ export function openOrder(order) {
 
       <p class="eyebrow mb-1">Change status</p>
       <div class="chips mb-3" id="statusChips">
-        ${['PENDING', 'CONFIRMED', 'PACKED', 'DELIVERED', 'CANCELLED'].map((status) => `
+        ${['PAID', 'CONFIRMED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'].map((status) => `
           <button class="chip ${order.status === status ? 'is-active' : ''}" data-set-status="${status}" type="button">${status}</button>
         `).join('')}
       </div>

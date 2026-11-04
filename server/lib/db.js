@@ -797,7 +797,9 @@ export class Database {
       discount,
       total_amount: total,
       total_pv: totalPv,
-      status: 'CONFIRMED',
+      status: ['CASH', 'CARD', 'BKASH', 'NAGAD', 'WALLET'].includes(clean(payload.payment_method || 'CASH', 24).toUpperCase() || 'CASH')
+        ? 'PAID'
+        : 'CONFIRMED',
       payment_method: clean(payload.payment_method || 'CASH', 24).toUpperCase() || 'CASH',
       note: payload.note ? multiline(payload.note, 500) : null,
       source: clean(payload.source || 'web', 24) || 'web',
@@ -831,6 +833,18 @@ export class Database {
     return { order: this.mapOrder(order), duplicate: false };
   }
 
+  markPaid(orderId) {
+    const order = this.orderRow(orderId);
+    if (!order) throw new ApiError('Order not found', 404, 'not_found');
+    if (String(order.status) === 'PAID') return this.mapOrder(order);
+    order.status = 'PAID';
+    order.updated_at = nowIso();
+    order.rev = this.nextRev();
+    this.audit('status_changed', 'order', order.id, `${order.status} · payment confirmed`);
+    this.save();
+    return this.mapOrder(order);
+  }
+
   productRowBySku(sku) {
     const target = String(sku).toUpperCase();
     return this.data.products.find((product) => String(product.sku).toUpperCase() === target) || null;
@@ -839,7 +853,7 @@ export class Database {
   updateOrderStatus(id, status) {
     const order = this.orderRow(id);
     if (!order) throw new ApiError('Order not found', 404, 'not_found');
-    const allowed = ['PENDING', 'CONFIRMED', 'PACKED', 'DELIVERED', 'CANCELLED'];
+    const allowed = ['PENDING', 'CONFIRMED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PAID', 'CANCELLED'];
     const next = String(status || '').toUpperCase();
     if (!allowed.includes(next)) {
       throw new ApiError(`status must be one of: ${allowed.join(', ')}`, 422, 'validation_error');

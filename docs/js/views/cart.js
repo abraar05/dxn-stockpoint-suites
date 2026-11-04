@@ -10,7 +10,7 @@ import { icon, emptyState, openModal, closeModal, toast, receiptText, orderMessa
 import * as store from '../store.js';
 import { hasBase } from '../api.js';
 
-const PAYMENTS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK TRANSFER'];
+const PAYMENTS = ['CASH', 'BKASH', 'NAGAD', 'CARD', 'BANK TRANSFER', 'WALLET'];
 
 // ── Rendering ───────────────────────────────────────────────────────────────
 

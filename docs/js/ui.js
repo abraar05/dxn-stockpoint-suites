@@ -363,8 +363,8 @@ export function emptyState(title, text, iconName = 'package') {
 
 export function statusBadge(status) {
   const map = {
-    PENDING: 'warn', CONFIRMED: 'info', PACKED: 'info',
-    DELIVERED: 'ok', CANCELLED: 'danger',
+    PENDING: 'warn', PAID: 'ok', CONFIRMED: 'info', PACKED: 'info',
+    DISPATCHED: 'info', OUT_FOR_DELIVERY: 'info', DELIVERED: 'ok', CANCELLED: 'danger',
   };
   return `<span class="badge badge--${map[status] || 'muted'}">${esc(status || 'UNKNOWN')}</span>`;
 }

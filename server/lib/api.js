@@ -290,6 +290,14 @@ export function createApi({ db }) {
         return;
       }
 
+      const markPaidMatch = path.match(/^\/api\/v1\/orders\/(\d+)\/mark-paid$/);
+      if (markPaidMatch && req.method === 'POST') {
+        requireAdmin(auth);
+        const order = db.markPaid(int(markPaidMatch[1]));
+        ok(res, { message: 'Payment confirmed', order });
+        return;
+      }
+
       const receiptMatch = path.match(/^\/api\/v1\/orders\/(\d+)\/receipt$/);
       if (receiptMatch && req.method === 'GET') {
         requireAdmin(auth);

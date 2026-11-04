@@ -148,6 +148,8 @@ function render({ force = false } = {}) {
   const key = [
     route,
     store.state.isAdmin,
+    store.state.isCustomer,
+    store.state.customer?.id,
     store.state.tier,
     store.state.theme,
     store.state.products.length,

@@ -440,6 +440,16 @@ export class Database {
     return info.customer;
   }
 
+  myOrders(token) {
+    const info = this.customerAccountByToken(token);
+    if (!info) throw new ApiError('Sign in to view your orders', 401, 'unauthorized');
+    const customerId = int(info.session.customer_id);
+    return this.data.orders
+      .filter((order) => int(order.customer_id) === customerId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((order) => this.mapOrder(order));
+  }
+
   updateMyProfile(token, patch) {
     const info = this.customerAccountByToken(token);
     if (!info) throw new ApiError('Sign in to update your profile', 401, 'unauthorized');

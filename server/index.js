@@ -36,14 +36,14 @@ function argument(name, fallback = '') {
 
 const hasFlag = (name) => process.argv.includes(name);
 
+const PRODUCTION = hasFlag('--production') || process.env.NODE_ENV === 'production';
 const PORT = Number(argument('--port', process.env.PORT || 4173));
-const HOST = argument('--host', process.env.HOST || '127.0.0.1');
+const HOST = argument('--host', process.env.HOST || (PRODUCTION ? '0.0.0.0' : '127.0.0.1'));
 const PIN = argument('--pin', process.env.DXN_PIN || '2468');
 const ADMIN_KEY = process.env.DXN_ADMIN_KEY || 'local-dev-admin-key-change-me';
 const OPEN = hasFlag('--open');
 const DEMO = hasFlag('--demo');
 const RESET = hasFlag('--reset');
-const PRODUCTION = hasFlag('--production') || process.env.NODE_ENV === 'production';
 
 if (RESET) {
   fs.rmSync(path.join(DATA, 'db.json'), { force: true });

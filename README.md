@@ -134,12 +134,17 @@ Full walkthrough in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The short version:
    asks for firewall permission once on first start). Android: Settings →
    paste `http://<shop-pc-ip>:4173` → Save — both clients now share one live
    catalogue, order history and stock ledger.
-2. **Multi-device over the internet (PHP)** — upload `api/` to any PHP 8 host,
+2. **Docker / any host** — `docker build -t dxn-stockpoint .` then
+   `docker run -p 4173:4173 --env-file .env dxn-stockpoint`. Works on any VPS,
+   Render, Fly.io, Railway, Azure Container Apps, etc. Copy `.env.example` to
+   `.env` and set `DXN_PIN` + `DXN_ADMIN_KEY` (production mode refuses the
+   defaults). Point the web app and Android app at the public HTTPS URL.
+3. **Multi-device over the internet (PHP)** — upload `api/` to any PHP 8 host,
    fill `api/config/config.php`, open `…/api/public/install.php?key=<key>` once,
    then point both apps at that origin.
-3. **Web app hosting** — `docs/` is publishable anywhere static (GitHub Pages via
+4. **Web app hosting** — `docs/` is publishable anywhere static (GitHub Pages via
    the included workflow). One address powers both clients.
-4. **Android** — `scripts/provision-android.ps1` (one-off) then
+5. **Android** — `scripts/provision-android.ps1` (one-off) then
    `scripts/build-android.ps1`; the APK/AAB lands in GitHub Releases.
 
 ## Troubleshooting

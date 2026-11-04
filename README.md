@@ -4,6 +4,13 @@ An offline-first point of sale for a DXN distributor stockpoint — **one API,
 three run paths, two clients that stay in sync**: a web PWA and a native
 Android app. Sell with no internet, sync the moment you have it.
 
+| | |
+|---|---|
+| 🌐 Web app (live) | https://deskamarx.github.io/dxn-stockpoint/ |
+| 📱 Android APK | https://github.com/deskamarx/dxn-stockpoint/releases/tag/v3.0.0 |
+| 🖥️ Repo | https://github.com/deskamarx/dxn-stockpoint |
+| 🔒 Privacy | docs/privacy.html on any deployment |
+
 ```
         ┌────────────────────────────┐
         │  Shop server (pick one)    │   single source of truth
@@ -121,9 +128,12 @@ npm test
 
 Full walkthrough in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The short version:
 
-1. **Single PC / shop LAN** — `npm start` (or `npx` uploaded copy of the repo) on
-   the shop machine; the browser at `http://<shop-pc>:4173` and Android can both
-   reach it via the LAN IP. Good for one-till shops.
+1. **Single PC / shop LAN** — run `start-lan.cmd` (or `npm start`) on the shop
+   machine; the web app opens at `http://localhost:4173` and every phone on the
+   same Wi-Fi reaches the same server at `http://<shop-pc-ip>:4173` (Windows
+   asks for firewall permission once on first start). Android: Settings →
+   paste `http://<shop-pc-ip>:4173` → Save — both clients now share one live
+   catalogue, order history and stock ledger.
 2. **Multi-device over the internet (PHP)** — upload `api/` to any PHP 8 host,
    fill `api/config/config.php`, open `…/api/public/install.php?key=<key>` once,
    then point both apps at that origin.

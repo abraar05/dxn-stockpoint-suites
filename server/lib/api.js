@@ -111,6 +111,24 @@ function receiptText(db, order) {
 }
 
 export function createApi({ db }) {
+  const loginAttempts = new Map();
+  const LOGIN_LIMIT = 10;
+  const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+  function loginRate(ip) {
+    const now = Date.now();
+    const entry = loginAttempts.get(ip);
+    if (!entry || now - entry.firstAt > LOGIN_WINDOW_MS) {
+      loginAttempts.set(ip, { count: 0, firstAt: now });
+      return { ok: true };
+    }
+    if (entry.count >= LOGIN_LIMIT) {
+      const retryAfter = Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (now - entry.firstAt)) / 1000));
+      return { ok: false, retryAfter };
+    }
+    return { ok: true };
+  }
+
   return async function handleApi(req, res, url) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -148,9 +166,22 @@ export function createApi({ db }) {
 
       // ── Auth ──────────────────────────────────────────────────────────────
       if (req.method === 'POST' && path === '/api/v1/auth/login') {
+        const ip = req.socket?.remoteAddress || 'unknown';
+        const rate = loginRate(ip);
+        if (!rate.ok) {
+          res.setHeader('Retry-After', String(rate.retryAfter));
+          throw new ApiError(`Too many login attempts. Try again in ${rate.retryAfter} seconds.`, 429, 'rate_limited');
+        }
         const pin = clean(body.pin, 32);
-        const result = db.login(pin);
-        ok(res, result);
+        try {
+          const result = db.login(pin);
+          loginAttempts.delete(ip);
+          ok(res, result);
+        } catch (error) {
+          const entry = loginAttempts.get(ip);
+          if (entry) entry.count += 1;
+          throw error;
+        }
         return;
       }
       if (req.method === 'GET' && path === '/api/v1/auth/me') {

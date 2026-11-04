@@ -1121,6 +1121,7 @@ export class Database {
       driver: 'json',
       installed: true,
       server_time: nowIso(),
+      uptime_seconds: Math.round(process.uptime()),
       node: process.version,
       database: {
         ok: true,

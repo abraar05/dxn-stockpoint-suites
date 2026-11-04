@@ -45,8 +45,6 @@ const DEMO = hasFlag('--demo');
 const RESET = hasFlag('--reset');
 const PRODUCTION = hasFlag('--production') || process.env.NODE_ENV === 'production';
 
-const PRODUCTION = hasFlag('--production') || process.env.NODE_ENV === 'production';
-
 if (RESET) {
   fs.rmSync(path.join(DATA, 'db.json'), { force: true });
 }

@@ -116,6 +116,7 @@ export class Database {
     data.movements ||= [];
     data.sessions ||= [];
     data.audit ||= [];
+    data.customerAccounts ||= [];
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
       if (!data.settings[key]) {
         data.settings[key] = { value: String(value), rev: 0, updated_at: nowIso() };
@@ -149,6 +150,7 @@ export class Database {
       movements: [],
       sessions: [],
       audit: [],
+      customerAccounts: [],
     };
 
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
@@ -335,6 +337,134 @@ export class Database {
     if (!token) return;
     this.data.sessions = this.data.sessions.filter((item) => !safeEqual(item.token, token));
     this.save();
+  }
+
+  // ── Customer accounts (ecommerce) ────────────────────────────────────────
+  registerCustomerAccount({ phone, password, name, email }) {
+    const cleanPhone = clean(phone, 40);
+    if (!cleanPhone) throw new ApiError('Phone is required', 422, 'validation_error');
+    if (String(password || '').length < 6) throw new ApiError('Password must be at least 6 characters', 422, 'validation_error');
+    const existing = this.data.customerAccounts.find((a) => String(a.phone) === cleanPhone);
+    if (existing) throw new ApiError('An account with this phone already exists', 409, 'duplicate_account');
+
+    // Link to an existing customer record by phone, or create a new one.
+    let customer = this.data.customers.find((c) => String(c.phone || '') === cleanPhone);
+    const now = nowIso();
+    if (!customer) {
+      this.data.meta.counters.customer += 1;
+      customer = {
+        id: this.data.meta.counters.customer,
+        name: clean(name, 160) || 'Customer',
+        phone: cleanPhone,
+        dxn_member_id: null,
+        is_member: 0,
+        total_orders: 0,
+        total_spent: 0,
+        total_pv: 0,
+        last_order_at: null,
+        created_at: now,
+        updated_at: now,
+        rev: this.nextRev(),
+      };
+      this.data.customers.push(customer);
+    } else {
+      if (clean(name, 160)) customer.name = clean(name, 160);
+      customer.updated_at = now;
+      customer.rev = this.nextRev();
+    }
+
+    const salt = randomToken(16);
+    const account = {
+      id: this.data.customerAccounts.length + 1,
+      customer_id: customer.id,
+      phone: cleanPhone,
+      email: clean(email, 120) || null,
+      name: clean(name, 160) || customer.name,
+      salt,
+      password_hash: hashPin(String(password), salt),
+      created_at: now,
+      updated_at: now,
+    };
+    this.data.customerAccounts.push(account);
+
+    const token = randomToken(32);
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    this.data.sessions = this.data.sessions
+      .filter((s) => new Date(s.expires_at).getTime() > Date.now())
+      .slice(-40);
+    this.data.sessions.push({ token, created_at: nowIso(), expires_at: expires, role: 'customer', customer_id: customer.id, account_id: account.id });
+    this.save();
+    return {
+      token,
+      expires_at: expires,
+      role: 'customer',
+      customer: this.mapCustomer(customer),
+    };
+  }
+
+  loginCustomer(phone, password) {
+    const cleanPhone = clean(phone, 40);
+    if (!cleanPhone) throw new ApiError('Phone is required', 422, 'validation_error');
+    const account = this.data.customerAccounts.find((a) => String(a.phone) === cleanPhone);
+    if (!account) throw new ApiError('No account found with this phone', 401, 'invalid_credentials');
+    if (!verifyPin(String(password), account.salt, account.password_hash)) {
+      throw new ApiError('Incorrect password', 401, 'invalid_credentials');
+    }
+    const customer = this.data.customers.find((c) => int(c.id) === int(account.customer_id));
+    const token = randomToken(32);
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    this.data.sessions = this.data.sessions
+      .filter((s) => new Date(s.expires_at).getTime() > Date.now())
+      .slice(-40);
+    this.data.sessions.push({ token, created_at: nowIso(), expires_at: expires, role: 'customer', customer_id: account.customer_id, account_id: account.id });
+    this.save();
+    return {
+      token,
+      expires_at: expires,
+      role: 'customer',
+      customer: customer ? this.mapCustomer(customer) : null,
+    };
+  }
+
+  customerAccountByToken(token) {
+    const session = this.verifyToken(token);
+    if (!session || session.role !== 'customer') return null;
+    const account = this.data.customerAccounts.find((a) => int(a.id) === int(session.account_id));
+    const customer = this.data.customers.find((c) => int(c.id) === int(session.customer_id));
+    return { session, account, customer: customer ? this.mapCustomer(customer) : null };
+  }
+
+  myProfile(token) {
+    const info = this.customerAccountByToken(token);
+    if (!info) throw new ApiError('Sign in to view your profile', 401, 'unauthorized');
+    return info.customer;
+  }
+
+  updateMyProfile(token, patch) {
+    const info = this.customerAccountByToken(token);
+    if (!info) throw new ApiError('Sign in to update your profile', 401, 'unauthorized');
+    const customer = this.data.customers.find((c) => int(c.id) === int(info.session.customer_id));
+    if (!customer) throw new ApiError('Customer record not found', 404, 'not_found');
+    if (patch.name !== undefined) customer.name = clean(patch.name, 160) || customer.name;
+    if (patch.email !== undefined) {
+      const acct = this.data.customerAccounts.find((a) => int(a.id) === int(info.session.account_id));
+      if (acct) acct.email = clean(patch.email, 120) || null;
+    }
+    if (patch.dxn_member_id !== undefined) customer.dxn_member_id = clean(patch.dxn_member_id, 40).toUpperCase() || customer.dxn_member_id;
+    customer.updated_at = nowIso();
+    customer.rev = this.nextRev();
+    this.save();
+    return this.mapCustomer(customer);
+  }
+
+  trackOrder(orderNumber, phone) {
+    const cleanNumber = clean(orderNumber, 40);
+    const cleanPhone = clean(phone, 40);
+    const order = this.data.orders.find((o) =>
+      String(o.order_number) === cleanNumber && String(o.customer_phone || '') === cleanPhone
+    );
+    if (!order) throw new ApiError('Order not found', 404, 'not_found');
+    return this.mapOrder(order);
   }
 
   isAdminKey(key) {
@@ -707,12 +837,14 @@ export class Database {
     return orderNumber(this.data.meta.orderSeq, new Date());
   }
 
-  createOrder(payload, { isAdmin = false } = {}) {
+  createOrder(payload, { isAdmin = false, customerId = null } = {}) {
     if (!isAdmin && this.setting('allow_public_orders', '1') !== '1') {
       throw new ApiError('Ordering is currently disabled for this stockpoint', 403, 'ordering_disabled');
     }
 
-    const customerName = clean(payload.customer_name, 160);
+    const linkedCustomerId = customerId ? int(customerId) : null;
+    const linkedCustomer = linkedCustomerId ? this.data.customers.find((c) => int(c.id) === linkedCustomerId) : null;
+    const customerName = clean(payload.customer_name, 160) || (linkedCustomer ? clean(linkedCustomer.name, 160) : '');
     if (!customerName) throw new ApiError('customer_name is required', 422, 'validation_error');
 
     const clientUuid = clean(payload.client_uuid, 64);
@@ -773,10 +905,10 @@ export class Database {
     const rev = this.nextRev();
     const orderNumberValue = this.nextOrderNumber();
 
-    const customerId = this.touchCustomer({
+    const resolvedCustomerId = linkedCustomerId || this.touchCustomer({
       name: customerName,
-      phone: payload.customer_phone,
-      memberId: payload.dxn_member_id,
+      phone: payload.customer_phone || (linkedCustomer ? linkedCustomer.phone : null),
+      memberId: payload.dxn_member_id || (linkedCustomer ? linkedCustomer.dxn_member_id : null),
       isMember,
       total,
       pv: totalPv,
@@ -788,9 +920,9 @@ export class Database {
       id: this.data.meta.counters.order,
       client_uuid: clientUuid || null,
       order_number: orderNumberValue,
-      customer_id: customerId,
+      customer_id: resolvedCustomerId,
       customer_name: customerName,
-      customer_phone: clean(payload.customer_phone, 40) || null,
+      customer_phone: clean(payload.customer_phone || (linkedCustomer ? linkedCustomer.phone : ''), 40) || null,
       dxn_member_id: clean(payload.dxn_member_id, 40).toUpperCase() || null,
       is_member: isMember ? 1 : 0,
       subtotal,

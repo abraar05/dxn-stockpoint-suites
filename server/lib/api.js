@@ -69,10 +69,14 @@ function bearer(req) {
 
 function requestAuth(req, url, db) {
   const token = bearer(req) || clean(req.headers['x-api-key'], 200) || clean(url.searchParams.get('api_key'), 200);
-  if (!token) return { isAdmin: false, token: '' };
-  if (db.isAdminKey(token)) return { isAdmin: true, token, viaKey: true };
+  if (!token) return { isAdmin: false, isCustomer: false, customerId: null, token: '' };
+  if (db.isAdminKey(token)) return { isAdmin: true, isCustomer: false, customerId: null, token, viaKey: true };
   const session = db.verifyToken(token);
-  return { isAdmin: Boolean(session), token, viaKey: false };
+  if (!session) return { isAdmin: false, isCustomer: false, customerId: null, token, viaKey: false };
+  if (session.role === 'customer') {
+    return { isAdmin: false, isCustomer: true, customerId: int(session.customer_id), token, viaKey: false };
+  }
+  return { isAdmin: Boolean(session), isCustomer: false, customerId: null, token, viaKey: false };
 }
 
 function requireAdmin(auth) {
@@ -185,6 +189,11 @@ export function createApi({ db }) {
         return;
       }
       if (req.method === 'GET' && path === '/api/v1/auth/me') {
+        if (auth.isCustomer) {
+          const info = db.customerAccountByToken(auth.token);
+          ok(res, { role: 'customer', scope: 'customer', customer: info ? info.customer : null });
+          return;
+        }
         requireAdmin(auth);
         ok(res, { role: 'admin', scope: 'admin' });
         return;
@@ -198,6 +207,47 @@ export function createApi({ db }) {
       if (req.method === 'POST' && path === '/api/v1/auth/logout') {
         db.logout(auth.token);
         ok(res, { message: 'Signed out' });
+        return;
+      }
+
+      // ── Customer accounts (ecommerce) ────────────────────────────────────
+      if (req.method === 'POST' && path === '/api/v1/auth/register') {
+        const result = db.registerCustomerAccount({
+          phone: body.phone,
+          password: body.password,
+          name: body.name,
+          email: body.email,
+        });
+        ok(res, result, 201);
+        return;
+      }
+      if (req.method === 'POST' && path === '/api/v1/auth/customer/login') {
+        const result = db.loginCustomer(body.phone, body.password);
+        ok(res, result);
+        return;
+      }
+      if (req.method === 'GET' && path === '/api/v1/my/profile') {
+        if (!auth.isCustomer) throw new ApiError('Sign in with a customer account', 401, 'unauthorized');
+        ok(res, { profile: db.myProfile(auth.token) });
+        return;
+      }
+      if ((req.method === 'PUT' || req.method === 'PATCH') && path === '/api/v1/my/profile') {
+        if (!auth.isCustomer) throw new ApiError('Sign in with a customer account', 401, 'unauthorized');
+        const profile = db.updateMyProfile(auth.token, body);
+        ok(res, { profile });
+        return;
+      }
+      if (req.method === 'GET' && path === '/api/v1/my/orders') {
+        if (!auth.isCustomer) throw new ApiError('Sign in with a customer account', 401, 'unauthorized');
+        ok(res, { orders: db.myOrders(auth.token) });
+        return;
+      }
+      if (req.method === 'GET' && path === '/api/v1/my/track') {
+        const orderNumber = clean(url.searchParams.get('order_number'), 40);
+        const phone = clean(url.searchParams.get('phone'), 40);
+        if (!orderNumber || !phone) throw new ApiError('order_number and phone are required', 422, 'validation_error');
+        const order = db.trackOrder(orderNumber, phone);
+        ok(res, { order });
         return;
       }
 
@@ -299,7 +349,7 @@ export function createApi({ db }) {
         return;
       }
       if (req.method === 'POST' && path === '/api/v1/orders') {
-        const result = db.createOrder(body, { isAdmin: auth.isAdmin });
+        const result = db.createOrder(body, { isAdmin: auth.isAdmin, customerId: auth.customerId });
         ok(res, { order: result.order, duplicate: result.duplicate }, result.duplicate ? 200 : 201);
         return;
       }

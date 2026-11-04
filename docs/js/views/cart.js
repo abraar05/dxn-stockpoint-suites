@@ -41,6 +41,10 @@ function lineRow(line) {
 function bodyMarkup(totals) {
   const currency = store.currency();
   const { sale } = store.state;
+  const customer = store.state.isCustomer ? store.state.customer : null;
+  const defaultName = customer ? customer.name : sale.customer_name;
+  const defaultPhone = customer ? (customer.phone || sale.customer_phone) : sale.customer_phone;
+  const defaultMember = customer ? (customer.dxn_member_id || sale.dxn_member_id) : sale.dxn_member_id;
   return `
     ${totals.lines.map(lineRow).join('')}
 
@@ -51,13 +55,13 @@ function bodyMarkup(totals) {
       </div>
 
       <label class="field"><span>Name</span>
-        <input class="input cartName" value="${esc(sale.customer_name)}" placeholder="Walk-in customer" maxlength="160"></label>
+        <input class="input cartName" value="${esc(defaultName)}" placeholder="Walk-in customer" maxlength="160"></label>
 
       <div class="form-2">
         <label class="field"><span>Phone</span>
-          <input class="input cartPhone" inputmode="tel" value="${esc(sale.customer_phone)}" placeholder="01XXXXXXXXX" maxlength="40"></label>
+          <input class="input cartPhone" inputmode="tel" value="${esc(defaultPhone)}" placeholder="01XXXXXXXXX" maxlength="40"></label>
         <label class="field"><span>DXN member ID</span>
-          <input class="input cartMember" value="${esc(sale.dxn_member_id)}" placeholder="Optional" maxlength="40"></label>
+          <input class="input cartMember" value="${esc(defaultMember)}" placeholder="Optional" maxlength="40"></label>
       </div>
 
       <div class="form-2">

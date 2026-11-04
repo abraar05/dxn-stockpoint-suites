@@ -89,6 +89,9 @@ no build step, fully functional offline from the service-worker cache.
 
 | Screen | What you can do |
 |---|---|
+| **Shop / storefront** | Customer-facing catalogue, cart, checkout — works as viewer or signed-in customer |
+| **My account** | Customer sign-in/sign-up, profile, order history, live order tracking |
+| **Track order** | Public tracking by order number + phone (packaging → dispatch → delivery) |
 | **Dashboard** | Today's sales, month-to-date, 7-day revenue chart, low-stock watch, recent orders, quick actions |
 | **Point of sale** | Product grid with category chips, SKU/Enter fast-add, retail ↔ member pricing, sticky cart panel, hold/resume sales |
 | **Orders** | History with status chips, receipt modal, status changes, SteadFast shipping, CSV export, queued-sale recovery *(admin for history)* |

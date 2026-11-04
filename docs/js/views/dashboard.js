@@ -6,6 +6,7 @@
 import { esc, money, int, round2, num, compact, relTime, toDate } from '../util.js';
 import { icon, emptyState, hydrateIcons, statusBadge, initials } from '../ui.js';
 import * as store from '../store.js';
+import { openCustomerAuth } from './account.js';
 
 export function renderDashboard(root) {
   const currency = store.currency();
@@ -51,8 +52,25 @@ export function renderDashboard(root) {
   const hour = now.getHours();
   const greeting = hour < 5 ? 'Late night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const shopName = esc(store.state.settings.branch_name || 'Mohammadpur Stock Point');
+  const connected = hasBase();
 
   root.innerHTML = `
+    ${connected ? '' : `
+      <div class="card card--pad" style="margin-bottom:18px;border-color:color-mix(in srgb,var(--warning) 40%,transparent);background:var(--warning-soft)">
+        <div class="row" style="align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="min-width:0">
+            <h3 style="font-family:var(--font-display);font-size:15px;font-weight:700;margin-bottom:4px">Local mode — not connected to a shop server</h3>
+            <p style="font-size:13px;color:var(--muted);line-height:1.55">
+              You are browsing the built-in catalogue. Sales still save on this device and queue for sync.
+              To go live for customers anywhere, point this app at your own shop server (Docker image included) in
+              <a href="#/settings" style="color:var(--primary);font-weight:700">Settings → Shop server</a>.
+            </p>
+          </div>
+          <a class="btn btn--primary" href="#/settings">Connect server</a>
+        </div>
+      </div>
+    `}
+
     <section class="hero-card">
       <div class="hero-card__kicker">${greeting} · ${now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
       <h1 class="hero-card__title">${shopName}</h1>
@@ -162,7 +180,8 @@ export function renderDashboard(root) {
           <h3 style="font-family:var(--font-display);font-size:15px;font-weight:700">Viewer mode</h3>
           <p style="font-size:13px;color:var(--muted);margin-top:4px">Sales are saved locally and queue up for sync. Sign in with the shop PIN to see history and admin tools.</p>
         </div>
-        <button class="btn btn--primary" type="button" data-signin>${icon('user', 16)} Sign in</button>
+        <button class="btn btn--primary" type="button" data-signin>${icon('user', 16)} Shop sign-in</button>
+        <button class="btn btn--ghost" type="button" data-custsignin>${icon('userPlus', 16)} Customer sign-in</button>
       </div>
     `}
   `;
@@ -170,6 +189,9 @@ export function renderDashboard(root) {
   hydrateIcons(root);
   root.querySelector('[data-signin]')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('dxn:login'));
+  });
+  root.querySelector('[data-custsignin]')?.addEventListener('click', () => {
+    openCustomerAuth('login');
   });
 }
 

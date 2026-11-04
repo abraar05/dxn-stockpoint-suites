@@ -273,6 +273,8 @@ export const state = {
   held: [],
   theme: 'light',
   isAdmin: false,
+  isCustomer: false,
+  customer: null,
   health: null,
   connected: false,
 };
@@ -450,7 +452,9 @@ export function hydrate() {
 
   const session = read(SESSION_KEY, null);
   state.isAdmin = Boolean(session?.isAdmin) && Boolean(getToken()) && !isTokenExpired(getTokenMeta());
-  if (!state.isAdmin && session?.isAdmin) write(SESSION_KEY, { isAdmin: false });
+  state.isCustomer = Boolean(session?.isCustomer) && Boolean(getToken()) && !isTokenExpired(getTokenMeta());
+  if (!state.isAdmin && session?.isAdmin) write(SESSION_KEY, { isAdmin: false, isCustomer: state.isCustomer });
+  if (!state.isCustomer && session?.isCustomer) write(SESSION_KEY, { isAdmin: state.isAdmin, isCustomer: false });
 
   state.syncState = hasBase() ? 'idle' : 'local';
   state.ready = true;
@@ -459,8 +463,9 @@ export function hydrate() {
 
 export function setAdmin(flag) {
   state.isAdmin = Boolean(flag);
-  write(SESSION_KEY, { isAdmin: state.isAdmin });
-  if (!flag) {
+  if (flag) state.isCustomer = false;
+  write(SESSION_KEY, { isAdmin: state.isAdmin, isCustomer: state.isCustomer });
+  if (!flag && !state.isCustomer) {
     setToken('');
     if (state.settings) {
       // admin-only fields never stay in the shared cache
@@ -468,6 +473,15 @@ export function setAdmin(flag) {
       state.settings = rest;
     }
   }
+  notify();
+}
+
+export function setCustomer(flag, customer = null) {
+  state.isCustomer = Boolean(flag);
+  if (flag) state.isAdmin = false;
+  state.customer = flag ? customer : null;
+  write(SESSION_KEY, { isAdmin: state.isAdmin, isCustomer: state.isCustomer });
+  if (!flag) setToken('');
   notify();
 }
 
@@ -630,6 +644,7 @@ export function buildOrderPayload() {
       unit_price: line.price,
       unit_pv: line.pv,
     })),
+    customer_id: state.isCustomer && state.customer?.id ? state.customer.id : undefined,
     _totals: { subtotal, total, pv }, // stripped before it leaves the device
   };
 }
@@ -828,17 +843,32 @@ export async function syncNow({ quiet = false } = {}) {
 }
 
 export async function verifySession() {
-  if (!state.isAdmin || !getToken()) return false;
-  try {
-    await api.me();
-    return true;
-  } catch (error) {
-    if (error instanceof ApiError && error.isAuth) {
-      setAdmin(false);
-      return false;
+  if (state.isAdmin && getToken() && !isTokenExpired()) {
+    try {
+      await api.me();
+      return true;
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuth) {
+        setAdmin(false);
+        return false;
+      }
+      return state.isAdmin;
     }
-    return state.isAdmin;
   }
+  if (state.isCustomer && getToken() && !isTokenExpired()) {
+    try {
+      const result = await api.me();
+      if (result?.customer) state.customer = result.customer;
+      return true;
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuth) {
+        setCustomer(false);
+        return false;
+      }
+      return state.isCustomer;
+    }
+  }
+  return false;
 }
 
 let loopStarted = false;

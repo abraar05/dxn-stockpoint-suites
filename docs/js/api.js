@@ -189,9 +189,25 @@ export const api = {
     setToken(result.token, { expires_at: result.expires_at, role: result.role });
     return result;
   },
+  async registerCustomer(body) {
+    const result = await request('/api/v1/auth/register', { method: 'POST', body, auth: false });
+    setToken(result.token, { expires_at: result.expires_at, role: result.role, customer_id: result.customer?.id });
+    return result;
+  },
+  async customerLogin(phone, password) {
+    const result = await request('/api/v1/auth/customer/login', { method: 'POST', body: { phone, password }, auth: false });
+    setToken(result.token, { expires_at: result.expires_at, role: result.role, customer_id: result.customer?.id });
+    return result;
+  },
   me: () => request('/api/v1/auth/me'),
   changePin: (newPin) => request('/api/v1/auth/pin', { method: 'POST', body: { new_pin: newPin } }),
   logout: () => setToken(''),
+  // ── Customer account ─────────────────────────────────────────────────────
+  myProfile: () => request('/api/v1/my/profile'),
+  updateMyProfile: (patch) => request('/api/v1/my/profile', { method: 'PUT', body: patch }),
+  myOrders: () => request('/api/v1/my/orders'),
+  trackOrder: (orderNumber, phone) =>
+    request(`/api/v1/my/track${qs({ order_number: orderNumber, phone })}`, { auth: false }),
 
   // ── Catalogue ────────────────────────────────────────────────────────────
   products: (includeInactive = false) =>

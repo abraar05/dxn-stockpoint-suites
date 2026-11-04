@@ -14,6 +14,7 @@ import { renderCustomers } from './views/customers.js';
 import { renderReports } from './views/reports.js';
 import { renderSettings } from './views/settings.js';
 import { openCart, closeCart, isCartOpen, renderCartDrawer, openHeldSales } from './views/cart.js';
+import { renderAccount, renderTrack, openCustomerAuth } from './views/account.js';
 
 const ROUTES = {
   dashboard: { render: renderDashboard, title: 'Dashboard', kicker: 'Workspace' },
@@ -24,6 +25,8 @@ const ROUTES = {
   customers: { render: renderCustomers, title: 'Customers', kicker: 'Manage' },
   reports: { render: renderReports, title: 'Reports', kicker: 'Insights' },
   settings: { render: renderSettings, title: 'Settings', kicker: 'System' },
+  account: { render: renderAccount, title: 'My account', kicker: 'Customer' },
+  track: { render: renderTrack, title: 'Track order', kicker: 'Customer' },
 };
 
 let lastKey = '';
@@ -114,7 +117,7 @@ function updateChrome() {
   }
 
   const initials = $('#avatarInitials');
-  if (initials) initials.textContent = store.state.isAdmin ? 'AD' : 'MS';
+  if (initials) initials.textContent = store.state.isAdmin ? 'AD' : (store.state.isCustomer && store.state.customer?.name ? store.state.customer.name.charAt(0).toUpperCase() : 'MS');
   const adminDot = $('#adminDot');
   if (adminDot) adminDot.hidden = !store.state.isAdmin;
 
@@ -243,7 +246,11 @@ function closeMore() {
 // ── Account & login ─────────────────────────────────────────────────────────
 
 function openAccount() {
-  const { isAdmin, settings } = store.state;
+  const { isAdmin, isCustomer, customer, settings } = store.state;
+  if (isCustomer && customer) {
+    location.hash = '#/account';
+    return;
+  }
   openModal({
     title: isAdmin ? 'Shop account' : 'Account',
     body: `
@@ -276,9 +283,11 @@ function openAccount() {
       ? `<button class="btn btn--ghost" type="button" data-close>Close</button>
          <button class="btn btn--danger" type="button" data-signout>${icon('logout', 16)} Sign out</button>`
       : `<button class="btn btn--ghost" type="button" data-close>Close</button>
-         <button class="btn btn--primary" type="button" data-signin>${icon('user', 16)} Sign in</button>`,
+         <button class="btn btn--primary" type="button" data-signin>${icon('user', 16)} Shop sign-in</button>
+         <button class="btn btn--ghost" type="button" data-custsignin>${icon('userPlus', 16)} Customer sign-in</button>`,
     onMount(panel, close) {
       panel.querySelector('[data-signin]')?.addEventListener('click', () => { close(); openLogin(); });
+      panel.querySelector('[data-custsignin]')?.addEventListener('click', () => { close(); openCustomerAuth('login'); });
       panel.querySelector('[data-signout]')?.addEventListener('click', () => {
         store.setAdmin(false);
         close();
@@ -656,5 +665,5 @@ if (document.readyState === 'loading') {
 }
 
 // Escape hatch for console debugging / cross-view hooks.
-window.dxn = { openLogin, openAccount, openHelp, openSearch, openCart, closeCart, openHeldSales };
+window.dxn = { openLogin, openAccount, openHelp, openSearch, openCart, closeCart, openHeldSales, openCustomerAuth };
 export { openLogin, openAccount, openHelp };

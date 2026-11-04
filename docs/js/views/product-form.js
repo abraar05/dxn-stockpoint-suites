@@ -177,11 +177,11 @@ export function openStockForm(product) {
     body: `
       <div style="display:flex;gap:12px;justify-content:space-between;margin-bottom:18px;
         background:var(--surface-2);border:1.5px solid var(--border);border-radius:12px;padding:14px">
-        <div><div class="stat__label">On hand</div>
+        <div><div class="eyebrow">On hand</div>
           <div style="font-size:26px;font-weight:800;color:var(--primary)">${int(product.stock_qty)}</div></div>
-        <div style="text-align:right"><div class="stat__label">Stock value</div>
+        <div style="text-align:right"><div class="eyebrow">Stock value</div>
           <div style="font-size:16px;font-weight:800">${money(num(product.stock_qty) * num(product.member_price), store.currency())}</div>
-          <div class="stat__hint">at member price</div></div>
+          <div style="font-size:11px;color:var(--faint)">at member price</div></div>
       </div>
 
       <div class="form-2">

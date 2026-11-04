@@ -1,15 +1,19 @@
 # Root
 .DS_Store
+Thumbs.db
 *.iml
 .gradle
 local.properties
 *.hprof
 .idea/
+.vscode/
 captures/
 .externalNativeBuild/
 .cxx/
 *.keystore
 !debug.keystore
+*.swp
+*.swo
 
 # Android build outputs
 android/DXNStockpoint/build/
@@ -17,6 +21,7 @@ android/DXNStockpoint/app/build/
 android/DXNStockpoint/.gradle/
 android/DXNStockpoint/local.properties
 android/DXNStockpoint/.idea/
+android/DXNStockpoint/.kotlin/
 
 # Gradle wrapper
 !gradle/wrapper/gradle-wrapper.jar
@@ -26,7 +31,19 @@ android/DXNStockpoint/.idea/
 *.apk
 *.aab
 
-# Node.js backend
+# Local server runtime data — never commit a real shop database
+server/data/
+*.sqlite
+*.sqlite3
+*.db
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Retired Node backend
 backend/node_modules/
 backend/dxn_stockpoint.db
 backend/*.db
@@ -44,12 +61,10 @@ api/storage/*.log
 .tooling-*.log
 *.tmp
 dist/
+*.log
 
 # Stale v1.1.0 root APK — releases are published from CI, not committed
 /app-debug.apk
-
-# Kotlin session caches
-android/DXNStockpoint/.kotlin/
 
 # FTP deploy state written by the CI action
 .ftp-state*.json
@@ -57,4 +72,3 @@ api/**/.ftp-state*.json
 
 # PHP dev server router used locally only
 api/public/router.php
-

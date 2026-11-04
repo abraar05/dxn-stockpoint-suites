@@ -1,6 +1,6 @@
 /**
- * Settings: connect the shop server, edit the shop profile, change the PIN and
- * manage what this device keeps offline.
+ * Settings: connection, shop profile, SteadFast courier, access, device care.
+ * Split into tabs so each job of the shop has its own room.
  */
 
 import { esc, money, num, int, relTime, downloadFile, digits } from '../util.js';
@@ -8,7 +8,53 @@ import { icon, toast, confirmAction, openModal, closeModal } from '../ui.js';
 import api, { ApiError, getBase, setBase, hasBase, getTokenMeta } from '../api.js';
 import * as store from '../store.js';
 
-let lastProbe = null;
+let activeTab = 'server';
+const TABS = [
+  ['server', 'Server & courier'],
+  ['profile', 'Shop profile'],
+  ['access', 'Access'],
+  ['device', 'This device'],
+  ['about', 'About'],
+];
+
+export function renderSettings(root) {
+  root.innerHTML = `
+    <div class="section-head">
+      <div><h2>Settings</h2><p>The shop's engine room — connection, profile, access and device care.</p></div>
+    </div>
+
+    <div class="settings-tabs" id="settingsTabs">
+      ${TABS.map(([key, label]) => `
+        <button class="settings-tab ${activeTab === key ? 'is-active' : ''}" data-tab="${key}" type="button">${label}</button>
+      `).join('')}
+    </div>
+
+    <div class="settings-panel ${activeTab === 'server' ? 'is-active' : ''}" data-panel="server">
+      ${connectionCard()}
+      ${courierCard()}
+    </div>
+
+    <div class="settings-panel ${activeTab === 'access' ? 'is-active' : ''}" data-panel="access">
+      ${accountCard()}
+    </div>
+
+    <div class="settings-panel ${activeTab === 'profile' ? 'is-active' : ''}" data-panel="profile">
+      ${profileCard()}
+    </div>
+
+    <div class="settings-panel ${activeTab === 'device' ? 'is-active' : ''}" data-panel="device">
+      ${deviceCard()}
+    </div>
+
+    <div class="settings-panel ${activeTab === 'about' ? 'is-active' : ''}" data-panel="about">
+      ${aboutCard()}
+    </div>
+  `;
+
+  bind(root);
+}
+
+// ── Server tab ──────────────────────────────────────────────────────────────
 
 function connectionCard() {
   const { syncState, lastSyncAt, rev } = store.state;
@@ -18,7 +64,7 @@ function connectionCard() {
       <div class="section-head" style="margin-bottom:12px">
         <div>
           <h2 style="font-size:15px">Shop server</h2>
-          <p>${connected ? 'The API that keeps the web and Android apps in sync.' : 'One address powers both the web app and the Android app.'}</p>
+          <p>${connected ? 'The API that keeps this browser and the Android app on one data set.' : 'One address powers both the web app and the Android app.'}</p>
         </div>
         <span class="badge badge--${connected ? (syncState === 'online' ? 'ok' : 'warn') : 'danger'}">
           ${connected ? (syncState === 'online' ? 'Connected' : 'Not answering') : 'Not connected'}
@@ -27,8 +73,10 @@ function connectionCard() {
 
       <label class="field"><span>API base URL</span>
         <input class="input" id="apiBaseInput" type="url" inputmode="url" spellcheck="false"
-          placeholder="https://dnx-stockpoint.infinityfreeapp.com"
-          value="${esc(getBase())}"></label>
+          placeholder="https://your-shop.example.com"
+          value="${esc(getBase())}">
+        <small>Leave empty and run the included local server (npm start) to sync this PC only.</small>
+      </label>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn--ghost" type="button" id="probeBtn">${icon('cloud', 16)} Test connection</button>
@@ -38,16 +86,17 @@ function connectionCard() {
       <div id="probeResult" style="margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.7">
         ${connected
           ? `Last sync ${lastSyncAt ? relTime(new Date(lastSyncAt).toISOString()) : 'never'} · revision ${int(rev)}`
-          : 'The catalogue below is the built-in demo data. Connect your own API to go live.'}
+          : 'The catalogue is the built-in demo data until you connect a server. Sales still save on this device.'}
       </div>
 
-      <details style="margin-top:14px">
-        <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--muted)">How do I get an API address?</summary>
+      <details class="mt-3">
+        <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--muted)">Host your own API (one-time)</summary>
         <ol style="font-size:12.5px;color:var(--muted);line-height:1.8;padding-left:18px;margin-top:8px">
-          <li>Create a free InfinityFree account and a MySQL database.</li>
-          <li>Upload the <code>api/</code> folder from the GitHub repo into <code>htdocs</code>.</li>
-          <li>Copy <code>api/config/config.sample.php</code> to <code>api/config/config.php</code> and paste the database values.</li>
-          <li>Open <code>/api/public/install.php?key=YOUR_INSTALL_KEY</code> and set the shop PIN.</li>
+          <li><strong>Easiest:</strong> run <code>npm start</code> in the project folder — a full API serves at
+          <code>http://127.0.0.1:4173</code> and connects automatically.</li>
+          <li><strong>Multi-device:</strong> upload the <code>api/</code> folder (PHP+MySQL) to any PHP host.</li>
+          <li>Copy <code>api/config/config.sample.php</code> to <code>config.php</code> and paste database values.</li>
+          <li>Open <code>/api/public/install.php?key=YOUR_INSTALL_KEY</code> to set the shop PIN.</li>
           <li>Paste that address here — the Android app uses the same one.</li>
         </ol>
       </details>
@@ -55,11 +104,55 @@ function connectionCard() {
   `;
 }
 
+function courierCard() {
+  const disabled = store.state.isAdmin ? '' : 'disabled';
+  const webhookUrl = `${getBase() || location.origin}/api/v1/courier/webhook`;
+  return `
+    <div class="card card--pad" id="courierCard">
+      <div class="section-head" style="margin-bottom:12px">
+        <div><h2 style="font-size:15px">SteadFast courier</h2>
+          <p>Ship orders through SteadFast. Credentials are stored on the shop server, never in this browser.</p></div>
+        <span class="badge badge--muted" id="sfStatusBadge">Not configured</span>
+      </div>
+
+      <div class="form-2">
+        <label class="field" style="grid-column:1/-1"><span>Base URL</span>
+          <input class="input" id="sfBase" value="https://portal.packzy.com/api/v1" ${disabled} spellcheck="false"></label>
+        <label class="field"><span>API Key</span>
+          <input class="input" id="sfApiKey" ${disabled} spellcheck="false" placeholder="jsyjsj…"></label>
+        <label class="field"><span>Secret Key</span>
+          <input class="input" id="sfSecret" type="password" ${disabled} spellcheck="false"></label>
+        <label class="field" style="grid-column:1/-1"><span>Webhook token (optional)</span>
+          <input class="input" id="sfWebhook" ${disabled} spellcheck="false" placeholder="leave blank to reuse the API key"></label>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn--primary" type="button" id="sfSaveBtn" ${disabled}>${icon('check', 16)} Save credentials</button>
+        <button class="btn btn--ghost" type="button" id="sfBalanceBtn" ${disabled}>${icon('wallet', 16)} Check balance</button>
+      </div>
+
+      <div id="sfBalanceResult" style="margin-top:10px;font-size:12.5px;color:var(--muted)"></div>
+
+      <details class="mt-3">
+        <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--muted)">Webhook setup</summary>
+        <p style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px">
+          In your SteadFast merchant panel set the callback URL to<br>
+          <code style="word-break:break-all">${esc(webhookUrl)}</code><br>
+          and the bearer token to your API key. SteadFast will then push delivery status updates
+          to this shop automatically.
+        </p>
+      </details>
+    </div>
+  `;
+}
+
+// ── Profile tab ─────────────────────────────────────────────────────────────
+
 function profileCard() {
   const settings = store.state.settings;
   const disabled = store.state.isAdmin ? '' : 'disabled';
   return `
-    <div class="card card--pad" style="margin-bottom:18px">
+    <div class="card card--pad">
       <div class="section-head" style="margin-bottom:12px">
         <div><h2 style="font-size:15px">Shop profile</h2><p>Printed on receipts and sent with WhatsApp orders.</p></div>
         ${store.state.isAdmin ? '' : '<span class="badge badge--muted">Sign in to edit</span>'}
@@ -102,14 +195,49 @@ function profileCard() {
       <button class="btn btn--primary" type="button" id="saveProfileBtn" ${disabled}>
         ${icon('check', 16)} Save shop profile
       </button>
+      ${store.state.isAdmin ? '' : `<p style="font-size:12px;color:var(--muted);margin-top:10px">Switch to the Access tab and sign in with the shop PIN to edit these.</p>`}
     </div>
   `;
 }
 
+// ── Access tab ──────────────────────────────────────────────────────────────
+
+function accountCard() {
+  const meta = getTokenMeta();
+  return `
+    <div class="card card--pad">
+      <div class="section-head" style="margin-bottom:12px">
+        <div><h2 style="font-size:15px">Shop access</h2>
+          <p>${store.state.isAdmin
+            ? `Signed in${meta?.expires_at ? ` until ${new Date(meta.expires_at).toLocaleDateString()}` : ''}`
+            : 'Anyone can browse; the PIN unlocks sales history and admin.'}</p></div>
+        <span class="badge badge--${store.state.isAdmin ? 'ok' : 'muted'}">${store.state.isAdmin ? 'Admin' : 'Viewer'}</span>
+      </div>
+
+      ${store.state.isAdmin ? `
+        <div class="form-2">
+          <label class="field"><span>New shop PIN</span>
+            <input class="input" id="newPin" type="password" inputmode="numeric" minlength="4" placeholder="At least 4 characters"></label>
+          <label class="field"><span>Repeat PIN</span>
+            <input class="input" id="newPin2" type="password" inputmode="numeric" minlength="4" placeholder="Repeat"></label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn--primary" type="button" id="changePinBtn">${icon('check', 16)} Change PIN</button>
+          <button class="btn btn--danger" type="button" id="signOutBtn">${icon('logout', 16)} Sign out</button>
+        </div>
+      ` : `
+        <button class="btn btn--primary" type="button" id="signInBtn">${icon('user', 16)} Sign in with shop PIN</button>
+      `}
+    </div>
+  `;
+}
+
+// ── Device tab ──────────────────────────────────────────────────────────────
+
 function deviceCard() {
   const { outbox, orders, products, rev } = store.state;
   return `
-    <div class="card card--pad" style="margin-bottom:18px">
+    <div class="card card--pad">
       <div class="section-head" style="margin-bottom:12px">
         <div><h2 style="font-size:15px">This device</h2><p>Offline cache, queued sales and backups.</p></div>
       </div>
@@ -124,6 +252,10 @@ function deviceCard() {
           <div class="list__main"><div class="list__title">Queued sales</div>
             <div class="list__sub">${outbox.length ? `${int(outbox.length)} waiting for the server` : 'Everything is pushed'}</div></div>
           ${outbox.length ? '<button class="btn btn--sm btn--ghost" type="button" id="retryQueueBtn">Retry</button>' : ''}
+        </div>
+        <div class="list__row">
+          <div class="list__main"><div class="list__title">Held sales</div>
+            <div class="list__sub">${store.state.held.length ? `${int(store.state.held.length)} parked mid-transaction` : 'Nothing parked'}</div></div>
         </div>
         <div class="list__row">
           <div class="list__main"><div class="list__title">Backup</div>
@@ -142,128 +274,46 @@ function deviceCard() {
   `;
 }
 
-function accountCard() {
-  const meta = getTokenMeta();
-  return `
-    <div class="card card--pad" style="margin-bottom:18px">
-      <div class="section-head" style="margin-bottom:12px">
-        <div><h2 style="font-size:15px">Shop access</h2>
-          <p>${store.state.isAdmin
-            ? `Signed in${meta?.expires_at ? ` until ${new Date(meta.expires_at).toLocaleDateString()}` : ''}`
-            : 'Anyone can browse; the PIN unlocks sales history and admin.'}</p></div>
-        <span class="badge badge--${store.state.isAdmin ? 'ok' : 'muted'}">${store.state.isAdmin ? 'Admin' : 'Viewer'}</span>
-      </div>
-
-      ${store.state.isAdmin ? `
-        <div class="form-2">
-          <label class="field"><span>New shop PIN</span>
-            <input class="input" id="newPin" type="password" inputmode="numeric" minlength="4" placeholder="At least 4 characters"></label>
-          <label class="field"><span>Repeat PIN</span>
-            <input class="input" id="newPin2" type="password" inputmode="numeric" minlength="4" placeholder="Repeat"></label>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn--ghost" type="button" id="changePinBtn">${icon('check', 16)} Change PIN</button>
-          <button class="btn btn--danger" type="button" id="signOutBtn">${icon('logout', 16)} Sign out</button>
-        </div>
-      ` : `
-        <button class="btn btn--primary" type="button" id="signInBtn">${icon('user', 16)} Sign in with shop PIN</button>
-      `}
-    </div>
-  `;
-}
+// ── About tab ───────────────────────────────────────────────────────────────
 
 function aboutCard() {
   return `
     <div class="card card--pad">
       <div class="section-head" style="margin-bottom:12px">
-        <div><h2 style="font-size:15px">About</h2><p>Mohammadpur Stock Point 2.1 — one codebase, two clients.</p></div>
+        <div><h2 style="font-size:15px">About Stockpoint</h2><p>Mohammadpur Stock Point 3.0 — one codebase, two clients.</p></div>
       </div>
       <div class="list">
         <div class="list__row"><div class="list__main">
           <div class="list__title">Web app</div>
-          <div class="list__sub">Static PWA hosted on GitHub Pages</div></div>
-          <a class="btn btn--sm btn--ghost" href="https://github.com/abraar05/dxn-stockpoint" target="_blank" rel="noopener">Repo</a></div>
+          <div class="list__sub">Static PWA — host on GitHub Pages or any static server</div></div></div>
         <div class="list__row"><div class="list__main">
           <div class="list__title">Android app</div>
-          <div class="list__sub">Kotlin + Compose, same API, offline cache</div></div>
-          <a class="btn btn--sm btn--ghost" href="https://github.com/abraar05/dxn-stockpoint/releases" target="_blank" rel="noopener">APK</a></div>
+          <div class="list__sub">Kotlin + Compose, same API, offline cache</div></div></div>
         <div class="list__row"><div class="list__main">
-          <div class="list__title">Backend</div>
-          <div class="list__sub">PHP 8 + MySQL on InfinityFree (free forever)</div></div>
-          <a class="btn btn--sm btn--ghost" href="${esc(getBase())}/api/v1/health" target="_blank" rel="noopener">Health</a></div>
+          <div class="list__title">Local server</div>
+          <div class="list__sub">Zero-dependency Node API included in <code>server/</code></div></div></div>
         <div class="list__row"><div class="list__main">
           <div class="list__title">Privacy</div>
           <div class="list__sub">What is stored, where it goes, how to delete it</div></div>
           <a class="btn btn--sm btn--ghost" href="privacy.html" target="_blank" rel="noopener">Read</a></div>
       </div>
-      <p style="font-size:11.5px;color:var(--faint);margin-top:12px">
-        Built to run on free tiers: GitHub Pages for the web, GitHub Releases for the APK,
-        InfinityFree for the API. No paid services required.
-      </p>
     </div>
   `;
 }
 
-
-function courierCard() {
-  const disabled = store.state.isAdmin ? '' : 'disabled';
-  const base = 'https://dxn.infy.click';
-  const webhookUrl = `${getBase() || base}/api/v1/courier/webhook`;
-  return `
-    <div class="card card--pad" style="margin-bottom:18px" id="courierCard">
-      <div class="section-head" style="margin-bottom:12px">
-        <div><h2 style="font-size:15px">SteadFast courier</h2>
-          <p>Ship orders to customers via SteadFast. Credentials are stored on the shop server.</p></div>
-        <span class="badge badge--muted" id="sfStatusBadge">Not configured</span>
-      </div>
-
-      <div class="form-2">
-        <label class="field" style="grid-column:1/-1"><span>Base URL</span>
-          <input class="input" id="sfBase" value="https://portal.packzy.com/api/v1" ${disabled} spellcheck="false"></label>
-        <label class="field"><span>API Key</span>
-          <input class="input" id="sfApiKey" ${disabled} spellcheck="false" placeholder="jsyjsj…"></label>
-        <label class="field"><span>Secret Key</span>
-          <input class="input" id="sfSecret" type="password" ${disabled} spellcheck="false"></label>
-        <label class="field" style="grid-column:1/-1"><span>Webhook token (optional)</span>
-          <input class="input" id="sfWebhook" ${disabled} spellcheck="false" placeholder="leave blank to use the API key"></label>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-        <button class="btn btn--primary" type="button" id="sfSaveBtn" ${disabled}>${icon('check',16)} Save credentials</button>
-        <button class="btn btn--ghost" type="button" id="sfBalanceBtn" ${disabled}>${icon('wallet',16)} Check balance</button>
-      </div>
-
-      <div id="sfBalanceResult" style="margin-top:10px;font-size:12.5px;color:var(--muted)"></div>
-
-      <details style="margin-top:14px">
-        <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--muted)">Webhook setup</summary>
-        <p style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px">
-          In your SteadFast merchant panel set the callback URL to<br>
-          <code style="word-break:break-all">${esc(webhookUrl)}</code><br>
-          and the bearer token to your API key. SteadFast will then push delivery status updates
-          to this shop automatically.
-        </p>
-      </details>
-    </div>
-  `;
-}
-
-export function renderSettings(root) {
-  root.innerHTML = `
-    <div class="section-head">
-      <div><h2>Settings</h2><p>Connection, shop profile and what this device keeps.</p></div>
-    </div>
-    ${connectionCard()}
-    ${accountCard()}
-    ${profileCard()}
-    ${courierCard()}
-    ${deviceCard()}
-    ${aboutCard()}
-  `;
-  bind(root);
-}
+// ── Bindings ────────────────────────────────────────────────────────────────
 
 function bind(root) {
+  root.querySelectorAll('[data-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      activeTab = tab.dataset.tab;
+      root.querySelectorAll('[data-tab]').forEach((t) => t.classList.toggle('is-active', t === tab));
+      root.querySelectorAll('[data-panel]').forEach((panel) => {
+        panel.classList.toggle('is-active', panel.dataset.panel === activeTab);
+      });
+    });
+  });
+
   const baseInput = root.querySelector('#apiBaseInput');
 
   root.querySelector('#probeBtn')?.addEventListener('click', async (event) => {
@@ -274,7 +324,6 @@ function bind(root) {
     button.innerHTML = '<span class="spinner"></span> Testing…';
     try {
       const { base, health } = await api.probe(baseInput.value);
-      lastProbe = health;
       const counts = health?.database?.counts || {};
       target.innerHTML = `
         <div style="color:var(--success);font-weight:700">Reachable: ${esc(base)}</div>
@@ -283,7 +332,6 @@ function bind(root) {
         ${health?.installed === false ? '<div style="color:var(--warning)">Tables are not installed yet — open install.php on the server.</div>' : ''}
       `;
     } catch (error) {
-      lastProbe = null;
       target.innerHTML = `<div style="color:var(--danger);font-weight:700">${esc(error.message)}</div>`;
     } finally {
       button.disabled = false;
@@ -322,6 +370,7 @@ function bind(root) {
   root.querySelector('#signOutBtn')?.addEventListener('click', () => {
     store.setAdmin(false);
     toast('Signed out of the admin panel.');
+    location.reload();
   });
 
   root.querySelector('#changePinBtn')?.addEventListener('click', async (event) => {
@@ -497,7 +546,7 @@ function bind(root) {
       danger: true,
     });
     if (!ok) return;
-    const keep = ['dxn.apiBase.v2'];
+    const keep = ['dxn.apiBase.v2', 'dxn.theme.v3'];
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith('dxn.') && !keep.includes(key)) localStorage.removeItem(key);
     }

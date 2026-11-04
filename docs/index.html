@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mohammadpur Stock Point — DXN POS, inventory &amp; live sync</title>
-<meta name="description" content="Mohammadpur Stock Point: DXN point of sale, inventory, PV tracking and WhatsApp checkout. Works offline on the web and on Android, and syncs both through one API.">
-<meta name="theme-color" content="#054A29">
-<meta name="color-scheme" content="light">
+<title>Mohammadpur Stock Point — Point of Sale</title>
+<meta name="description" content="Mohammadpur Stock Point — a calm, offline-first point of sale for DXN distributors. Sell, track stock, manage customers and see your day at a glance.">
+<meta name="theme-color" content="#0b3d2e">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -14,84 +14,208 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="MSP Stockpoint">
+<meta name="apple-mobile-web-app-title" content="Stockpoint">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
+<script>
+  // Set the theme before paint so a dark-mode shop never sees a white flash.
+  (function () {
+    try {
+      var saved = localStorage.getItem('dxn.theme.v3');
+      var system = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = saved || (system ? 'dark' : 'light');
+    } catch (error) {
+      document.documentElement.dataset.theme = 'light';
+    }
+  })();
+</script>
 </head>
 <body>
+<a class="skip-link" href="#view">Skip to content</a>
 
-<header class="app-header">
-  <div class="app-header__inner">
-    <a class="brand" href="#/catalog" aria-label="Mohammadpur Stock Point home">
-      <img class="brand__logo" src="icons/logo-mark-96.png" alt="" width="40" height="40">
-      <span class="brand__text">
-        <strong id="branchName">Mohammadpur Stock Point</strong>
-        <span id="branchTag">Loading…</span>
-      </span>
-    </a>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar__top">
+      <a class="brand" href="#/dashboard" aria-label="Mohammadpur Stock Point home">
+        <span class="brand__logo"><img src="icons/logo-mark-96.png" alt="" width="42" height="42"></span>
+        <span class="brand__copy">
+          <strong id="brandName">Mohammadpur</strong>
+          <span>Stock Point</span>
+        </span>
+      </a>
+      <button class="icon-btn icon-btn--sidebar" id="sidebarClose" type="button" aria-label="Close menu">
+        <i data-icon="close" data-size="18"></i>
+      </button>
+    </div>
 
-    <nav class="nav" aria-label="Primary">
-      <a class="nav__btn" href="#/catalog" data-route="catalog"><i data-icon="grid"></i> Catalogue</a>
-      <a class="nav__btn" href="#/orders" data-route="orders"><i data-icon="receipt"></i> Orders</a>
-      <a class="nav__btn" href="#/admin" data-route="admin"><i data-icon="chart"></i> Admin</a>
-      <a class="nav__btn" href="#/settings" data-route="settings"><i data-icon="settings"></i> Settings</a>
+    <nav class="sidebar__nav">
+      <p class="nav-label">Workspace</p>
+      <a class="nav-item" href="#/dashboard" data-route="dashboard">
+        <i data-icon="home" data-size="19"></i><span>Dashboard</span>
+      </a>
+      <a class="nav-item" href="#/pos" data-route="pos">
+        <i data-icon="store" data-size="19"></i><span>Point of sale</span><kbd>F2</kbd>
+      </a>
+      <a class="nav-item" href="#/orders" data-route="orders">
+        <i data-icon="receipt" data-size="19"></i><span>Orders</span><span class="nav-count" id="navOrderCount" hidden>0</span>
+      </a>
+
+      <p class="nav-label">Manage</p>
+      <a class="nav-item" href="#/inventory" data-route="inventory">
+        <i data-icon="box" data-size="19"></i><span>Inventory</span>
+      </a>
+      <a class="nav-item" href="#/customers" data-route="customers">
+        <i data-icon="users" data-size="19"></i><span>Customers</span>
+      </a>
+      <a class="nav-item" href="#/reports" data-route="reports">
+        <i data-icon="chart" data-size="19"></i><span>Reports</span>
+      </a>
     </nav>
 
-    <div class="header__spacer"></div>
+    <div class="sidebar__foot">
+      <div class="sidebar-status" id="sidebarStatus">
+        <span class="status-dot" id="sidebarDot"></span>
+        <div>
+          <strong id="sidebarStatusTitle">Starting…</strong>
+          <span id="sidebarStatusText">Opening your shop</span>
+        </div>
+      </div>
+      <a class="nav-item nav-item--soft" href="#/settings" data-route="settings">
+        <i data-icon="settings" data-size="18"></i><span>Settings</span>
+      </a>
+      <button class="nav-item nav-item--soft" type="button" data-help>
+        <i data-icon="help" data-size="18"></i><span>Quick guide</span>
+      </button>
+      <p class="sidebar__version">Stockpoint <span>v3.0</span></p>
+    </div>
+  </aside>
 
-    <button class="sync-pill" id="syncPill" data-state="idle" type="button" title="Sync status — tap to sync now">
-      <i class="sync-dot"></i><span class="sync-text" id="syncText">Starting…</span>
-    </button>
+  <div class="app__main">
+    <header class="topbar">
+      <button class="icon-btn icon-btn--ghost menu-btn" id="menuBtn" type="button" aria-label="Open menu">
+        <i data-icon="menu" data-size="20"></i>
+      </button>
 
-    <button class="icon-btn" id="cartBtn" type="button" title="Cart" aria-label="Open cart">
-      <i data-icon="cart"></i>
-      <span class="icon-btn__badge" id="cartCount" hidden>0</span>
-    </button>
+      <div class="topbar__heading">
+        <span class="topbar__kicker" id="pageKicker">Workspace</span>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
 
-    <button class="icon-btn" id="accountBtn" type="button" title="Shop sign-in" aria-label="Account">
-      <i data-icon="user"></i>
-    </button>
+      <div class="topbar__spacer"></div>
+
+      <button class="search-trigger" id="globalSearchBtn" type="button" aria-label="Search everything">
+        <i data-icon="search" data-size="17"></i>
+        <span>Search products, orders…</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+
+      <button class="sync-pill" id="syncPill" data-state="idle" type="button" title="Sync status — click to sync now">
+        <span class="sync-dot"></span>
+        <span class="sync-text" id="syncText">Starting</span>
+      </button>
+
+      <button class="icon-btn icon-btn--ghost" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <i data-icon="moon" data-size="19"></i>
+      </button>
+
+      <button class="icon-btn icon-btn--ghost cart-btn" id="cartBtn" type="button" aria-label="Open cart" title="Cart">
+        <i data-icon="cart" data-size="19"></i>
+        <span class="icon-btn__badge" id="cartCount" hidden>0</span>
+      </button>
+
+      <button class="avatar-btn" id="accountBtn" type="button" aria-label="Shop account">
+        <span id="avatarInitials">MS</span>
+        <span class="avatar-btn__dot" id="adminDot" hidden></span>
+      </button>
+    </header>
+
+    <div class="offline-bar" id="offlineBar">
+      <i data-icon="wifiOff" data-size="18"></i>
+      <span id="offlineText">Offline — sales are saved on this device and will sync when the connection returns.</span>
+    </div>
+
+    <main id="view" tabindex="-1" aria-live="polite">
+      <div class="page-loading">
+        <div class="skeleton skeleton--hero"></div>
+        <div class="skeleton-row">
+          <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+        <div class="skeleton skeleton--table"></div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <span>Mohammadpur Stock Point</span>
+      <span class="dot-sep"></span>
+      <span>Offline-first DXN retail</span>
+      <span class="app-footer__spacer"></span>
+      <span id="footerSync">Local mode</span>
+    </footer>
   </div>
-</header>
-
-<div class="offline-bar" id="offlineBar">
-  <i data-icon="alert"></i>
-  <span>Offline — sales are saved on this device and will sync when the connection returns.</span>
 </div>
 
-<main id="view" aria-live="polite">
-  <div class="product-grid">
-    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-  </div>
-</main>
-
-<nav class="bottom-nav" aria-label="Sections">
-  <a class="bottom-nav__btn" href="#/catalog" data-route="catalog"><i data-icon="grid"></i><span>Catalogue</span></a>
-  <a class="bottom-nav__btn" href="#/orders" data-route="orders"><i data-icon="receipt"></i><span>Orders</span></a>
-  <a class="bottom-nav__btn" href="#/admin" data-route="admin"><i data-icon="chart"></i><span>Admin</span></a>
-  <a class="bottom-nav__btn" href="#/settings" data-route="settings"><i data-icon="settings"></i><span>Settings</span></a>
+<nav class="bottom-nav" aria-label="Primary">
+  <a class="bottom-nav__btn" href="#/dashboard" data-route="dashboard">
+    <i data-icon="home" data-size="21"></i><span>Home</span>
+  </a>
+  <a class="bottom-nav__btn" href="#/pos" data-route="pos">
+    <i data-icon="store" data-size="21"></i><span>Sell</span>
+  </a>
+  <a class="bottom-nav__btn" href="#/orders" data-route="orders">
+    <i data-icon="receipt" data-size="21"></i><span>Orders</span>
+  </a>
+  <a class="bottom-nav__btn" href="#/inventory" data-route="inventory">
+    <i data-icon="box" data-size="21"></i><span>Stock</span>
+  </a>
+  <button class="bottom-nav__btn" type="button" id="moreBtn">
+    <i data-icon="more" data-size="21"></i><span>More</span>
+  </button>
 </nav>
 
 <div class="overlay" id="overlay" hidden></div>
 
-<aside class="drawer" id="cartDrawer" aria-label="Cart" aria-hidden="true">
-  <div class="drawer__head">
-    <h3>Current sale</h3>
-    <button class="icon-btn" id="cartClose" type="button" aria-label="Close cart"><i data-icon="close"></i></button>
+<aside class="cart-drawer" id="cartDrawer" aria-label="Current sale" aria-hidden="true">
+  <div class="cart-drawer__head">
+    <div>
+      <span class="eyebrow">Current sale</span>
+      <h2>Your cart</h2>
+    </div>
+    <button class="icon-btn icon-btn--ghost" id="cartClose" type="button" aria-label="Close cart">
+      <i data-icon="close" data-size="19"></i>
+    </button>
   </div>
-  <div class="drawer__body" id="cartBody"></div>
-  <div class="drawer__foot" id="cartFoot"></div>
+  <div class="cart-drawer__body" id="cartBody"></div>
+  <div class="cart-drawer__foot" id="cartFoot"></div>
 </aside>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal__panel" id="modalPanel"></div>
 </div>
 
-<div class="toast-stack" id="toastStack" aria-live="assertive"></div>
+<div class="more-sheet" id="moreSheet" aria-hidden="true">
+  <div class="more-sheet__panel">
+    <div class="more-sheet__head">
+      <h3>More</h3>
+      <button class="icon-btn icon-btn--ghost" id="moreClose" type="button" aria-label="Close">
+        <i data-icon="close" data-size="19"></i>
+      </button>
+    </div>
+    <div class="more-sheet__grid">
+      <a href="#/customers" data-close-more><i data-icon="users" data-size="21"></i><span>Customers</span></a>
+      <a href="#/reports" data-close-more><i data-icon="chart" data-size="21"></i><span>Reports</span></a>
+      <a href="#/settings" data-close-more><i data-icon="settings" data-size="21"></i><span>Settings</span></a>
+      <button type="button" data-help><i data-icon="help" data-size="21"></i><span>Quick guide</span></button>
+      <button type="button" id="moreTheme"><i data-icon="moon" data-size="21"></i><span>Dark mode</span></button>
+      <button type="button" id="moreAccount"><i data-icon="user" data-size="21"></i><span>Account</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="assertive" aria-atomic="false"></div>
+<div class="print-root" id="printRoot" aria-hidden="true"></div>
 
 <noscript>
   <p style="padding:24px;text-align:center">Mohammadpur Stock Point needs JavaScript to run the point of sale.</p>

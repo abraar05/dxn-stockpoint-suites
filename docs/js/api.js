@@ -7,7 +7,7 @@
  */
 
 const BASE_KEY = 'dxn.apiBase.v2';
-const DEFAULT_BASE = 'https://dxn.infy.click';
+const DEFAULT_BASE = '';
 const TOKEN_KEY = 'dxn.token.v2';
 const TOKEN_META_KEY = 'dxn.tokenMeta.v2';
 
@@ -59,6 +59,19 @@ export function setBase(value) {
 
 export function hasBase() {
   return getBase() !== '';
+}
+
+export async function detectBase() {
+  if (getBase()) return { ok: true, base: getBase() };
+  if (typeof location === 'undefined' || !/^https?:$/.test(location.protocol)) return { ok: false, base: '' };
+  try {
+    const { base, health } = await api.probe('');
+    if (health?.status === 'ok' || health?.status === 'degraded') {
+      setBase(base);
+      return { ok: true, base, health };
+    }
+  } catch { /* no local API */ }
+  return { ok: false, base: '' };
 }
 
 export function getToken() {
@@ -227,22 +240,23 @@ export const api = {
   /** Used by the Settings screen to prove a base URL is a real Stockpoint API. */
   async probe(baseOverride) {
     const base = normalizeBase(baseOverride || getBase());
-    if (!base) throw new ApiError('Enter the API address first.', { code: 'no_base' });
+    const target = base ? `${base}/api/v1/health` : '/api/v1/health';
+    if (!base && !target) throw new ApiError('Enter the API address first.', { code: 'no_base' });
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 12000);
     try {
-      const res = await fetch(`${base}/api/v1/health`, {
+      const res = await fetch(target, {
         headers: { Accept: 'application/json' },
         signal: controller.signal,
         cache: 'no-store',
       });
       const payload = await res.json().catch(() => null);
-      if (!res.ok && !payload) throw new ApiError(`HTTP ${res.status} from ${base}/api/v1/health`);
-      return { base, health: payload };
+      if (!res.ok && !payload) throw new ApiError(`HTTP ${res.status} from ${target}`);
+      return { base: base || (typeof location !== 'undefined' ? location.origin : ''), health: payload };
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw new ApiError(
-        `Could not read ${base}/api/v1/health. Make sure the API is uploaded and api/public is the web root.`,
+        `Could not read ${target}. Make sure the API is uploaded and api/public is the web root.`,
       );
     } finally {
       clearTimeout(timer);

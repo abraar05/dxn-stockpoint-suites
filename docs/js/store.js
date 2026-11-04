@@ -13,6 +13,8 @@ const CACHE_KEY = 'dxn.cache.v2';
 const CART_KEY = 'dxn.cart.v2';
 const OUTBOX_KEY = 'dxn.outbox.v2';
 const SESSION_KEY = 'dxn.session.v2';
+const HELD_KEY = 'dxn.held.v3';
+const THEME_KEY = 'dxn.theme.v3';
 
 const POLL_MS = 15000;
 const MAX_ORDERS = 400;
@@ -192,7 +194,7 @@ const SEED_PRODUCTS = [
   retail_price: retail,
   member_price: member,
   pv_points: pv,
-  stock_qty: stock,
+  stock_qty: stock || (index % 13 === 0 ? 2 : index % 17 === 0 ? 0 : 12 + (index * 11) % 50),
   low_stock_at: 5,
   image_url: PRODUCT_IMAGES[sku] || null,
   is_active: 1,
@@ -268,8 +270,11 @@ export const state = {
   sale: emptySale(),
   tier: 'retail',
   outbox: [],
+  held: [],
+  theme: 'light',
   isAdmin: false,
   health: null,
+  connected: false,
 };
 
 function emptySale() {
@@ -320,6 +325,59 @@ export function persistCart() {
 
 export function persistOutbox() {
   write(OUTBOX_KEY, state.outbox);
+}
+
+export function persistHeld() {
+  write(HELD_KEY, state.held);
+}
+
+export function setTheme(theme) {
+  state.theme = theme === 'dark' ? 'dark' : 'light';
+  try { localStorage.setItem(THEME_KEY, state.theme); } catch { /* ignore */ }
+  document.documentElement.dataset.theme = state.theme;
+  notify();
+}
+
+export function holdSale(label = '') {
+  if (!state.cart.length) return { ok: false, message: 'The cart is empty.' };
+  const snapshot = {
+    id: uuid(),
+    label: (label || '').trim() || `Sale ${state.held.length + 1}`,
+    createdAt: Date.now(),
+    cart: JSON.parse(JSON.stringify(state.cart)),
+    sale: { ...state.sale },
+    tier: state.tier,
+    totals: cartTotals(),
+  };
+  state.held.unshift(snapshot);
+  state.held = state.held.slice(0, 12);
+  persistHeld();
+  clearCart();
+  notify();
+  return { ok: true, id: snapshot.id };
+}
+
+export function resumeHeld(id) {
+  const index = state.held.findIndex((item) => item.id === id);
+  if (index === -1) return { ok: false, message: 'That held sale is no longer available.' };
+  const snapshot = state.held[index];
+  if (state.cart.length) {
+    return { ok: false, message: 'Clear or finish the current cart before resuming a held sale.' };
+  }
+  state.cart = JSON.parse(JSON.stringify(snapshot.cart || []));
+  state.sale = { ...emptySale(), ...(snapshot.sale || {}) };
+  state.tier = snapshot.tier === 'member' ? 'member' : 'retail';
+  state.held.splice(index, 1);
+  persistHeld();
+  persistCart();
+  notify();
+  return { ok: true };
+}
+
+export function deleteHeld(id) {
+  state.held = state.held.filter((item) => item.id !== id);
+  persistHeld();
+  notify();
 }
 
 // ── Tiny observable ─────────────────────────────────────────────────────────
@@ -383,6 +441,12 @@ export function hydrate() {
   }
 
   state.outbox = read(OUTBOX_KEY, []) || [];
+  state.held = read(HELD_KEY, []) || [];
+
+  try {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme === 'light' || savedTheme === 'dark') state.theme = savedTheme;
+  } catch { /* ignore */ }
 
   const session = read(SESSION_KEY, null);
   state.isAdmin = Boolean(session?.isAdmin) && Boolean(getToken()) && !isTokenExpired(getTokenMeta());

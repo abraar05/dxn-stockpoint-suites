@@ -42,7 +42,7 @@
     {
       "name": "Point of sale",
       "short_name": "Sell",
-      "url": "./#/catalog",
+      "url": "./#/pos",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
@@ -52,9 +52,9 @@
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Admin",
-      "short_name": "Admin",
-      "url": "./#/admin",
+      "name": "Reports",
+      "short_name": "Reports",
+      "url": "./#/reports",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

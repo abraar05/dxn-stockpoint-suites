@@ -1,9 +1,9 @@
 /**
- * Transport layer for the Mohammadpur Stock Point API (PHP 8 + MySQL).
+ * Transport layer for the Mohammadpur Stock Point API.
  *
  * The base URL is chosen on first run and stored in localStorage, so the same
- * static build can talk to a local dev server, InfinityFree, or anything else
- * that serves api/public.
+ * static build can talk to the included Node server (server/), the PHP API in
+ * api/, or anything else that serves the Stockpoint v1 contract.
  */
 
 const BASE_KEY = 'dxn.apiBase.v2';

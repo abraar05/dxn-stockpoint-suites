@@ -220,14 +220,14 @@ server.listen(PORT, HOST, () => {
 
   console.log('');
   console.log('  Mohammadpur Stock Point');
-  console.log('  ───────────────────────────────────────────');
+  console.log('  -----------------------------------------------');
   console.log(`  Shop app     ${url}`);
   console.log(`  API health   ${url}/api/v1/health`);
   console.log(`  Mode         ${PRODUCTION ? 'production (secure)' : 'development'}`);
   console.log(`  Admin PIN    ${PIN}`);
   console.log(`  Data file    ${path.join(DATA, 'db.json')}`);
   console.log(`  Catalogue    ${products} products · ${orders} orders`);
-  console.log('  ───────────────────────────────────────────');
+  console.log('  -----------------------------------------------');
   console.log('  Press Ctrl+C to stop.');
   console.log('');
 

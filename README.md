@@ -127,6 +127,20 @@ Run the contract tests any time:
 npm test
 ```
 
+## Master suite
+
+Open `docs/suite.html` (or the deployed `…/suite.html`) for the unified
+**DXN Suite** shell — one rail combining:
+
+- **Stockpoint** — the live POS, embedded and synced to the shop server (real
+  app, not a demo)
+- **Flow** — orders, courier partners, dispatch, live tracking, fulfillment
+- **Intelligence** — control tower, NDR/COD, automation, analytics, SLA, team
+- **PV Planner** — month-end target optimizer reading live stock
+
+The Stockpoint workspace loads the real app (`./index.html`) so sales, stock
+and orders stay live-synced with the backend.
+
 ## Deploy for real
 
 Full walkthrough in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The short version:

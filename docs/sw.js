@@ -9,7 +9,7 @@ const VERSION = 'dxn-stockpoint-3.0.0-r2';
 const SHELL = [
   './',
   './index.html',
-  './manifest.webmanifest',
+  './suite.html',
   './privacy.html',
   './css/app.css',
   './js/app.js',

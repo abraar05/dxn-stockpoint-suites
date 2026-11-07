@@ -23,7 +23,28 @@ interface ApiService {
     @POST("api/v1/auth/pin")
     suspend fun changePin(@Body request: ChangePinRequest): GenericResponse
 
-    // ── Catalog ─────────────────────────────────────────────────────────────
+    
+
+    // ── Customer Accounts ─────────────────────────────────────────────────────
+    @POST("api/v1/auth/register")
+    suspend fun registerCustomer(@Body request: RegisterRequest): AuthResponse
+
+    @POST("api/v1/auth/customer/login")
+    suspend fun customerLogin(@Body request: CustomerLoginRequest): AuthResponse
+
+    @GET("api/v1/my/profile")
+    suspend fun customerProfile(): CustomerProfileResponse
+
+    @GET("api/v1/my/orders")
+    suspend fun customerOrders(): CustomerOrdersResponse
+
+    @GET("api/v1/my/track")
+    suspend fun customerTrack(
+        @Query("order_number") orderNumber: String,
+        @Query("phone") phone: String
+    ): CustomerTrackResponse
+
+// ── Catalog ─────────────────────────────────────────────────────────────
     @GET("api/v1/products")
     suspend fun getProducts(@Query("include_inactive") includeInactive: Int = 0): ProductResponse
 

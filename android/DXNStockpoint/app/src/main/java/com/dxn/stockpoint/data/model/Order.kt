@@ -186,14 +186,6 @@ data class CourierBalanceResponse(
 
 data class LoginRequest(val pin: String)
 
-data class AuthResponse(
-    val success: Boolean = false,
-    val token: String = "",
-    @SerializedName("expires_at") val expiresAt: String = "",
-    val role: String = "",
-    val ttl: Long = 0
-)
-
 data class MeResponse(
     val success: Boolean = false,
     val role: String = ""
@@ -201,7 +193,61 @@ data class MeResponse(
 
 data class ChangePinRequest(@SerializedName("new_pin") val newPin: String)
 
-// ── Sync & health ───────────────────────────────────────────────────────────
+
+
+// ── Customer Accounts ────────────────────────────────────────────────────────
+data class RegisterRequest(
+    val phone: String,
+    val password: String,
+    val name: String,
+    val email: String?
+)
+
+data class CustomerLoginRequest(
+    val phone: String,
+    val password: String
+)
+
+data class AuthResponse(
+    val success: Boolean = false,
+    val token: String = "",
+    @SerializedName("expires_at") val expiresAt: String = "",
+    val role: String = "",
+    val ttl: Long = 0,
+    val customer: CustomerProfile? = null,
+    val message: String = ""
+)
+
+data class CustomerProfile(
+    val id: Int = 0,
+    val name: String = "",
+    val phone: String? = null,
+    val dxnMemberId: String? = null,
+    val isMember: Int = 0,
+    val totalOrders: Int = 0,
+    val totalSpent: Double = 0.0,
+    val totalPv: Double = 0.0,
+    val lastOrderAt: String? = null,
+    val createdAt: String = ""
+)
+
+data class CustomerProfileResponse(
+    val success: Boolean = false,
+    val customer: CustomerProfile? = null
+)
+
+data class CustomerOrdersResponse(
+    val success: Boolean = false,
+    val orders: List<Order> = emptyList(),
+    val count: Int = 0
+)
+
+data class CustomerTrackResponse(
+    val success: Boolean = false,
+    val order: Order? = null
+)
+
+// ── Sync & health ───────────────────────────────────────────────────────────// ── Sync & health ───────────────────────────────────────────────────────────
 
 data class SyncResponse(
     val success: Boolean = false,

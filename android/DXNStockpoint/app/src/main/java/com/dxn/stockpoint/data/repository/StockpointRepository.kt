@@ -88,7 +88,51 @@ class StockpointRepository {
         failure(e)
     }
 
-    // ── Catalog ─────────────────────────────────────────────────────────────
+    
+
+    // ── Customer Accounts ─────────────────────────────────────────────────────
+    suspend fun registerCustomer(request: RegisterRequest): Result<AuthResponse> = try {
+        val response = api.registerCustomer(request)
+        if (response.success) {
+            Result.Success(response)
+        } else {
+            Result.Error(response.message ?: "Registration failed")
+        }
+    } catch (e: Throwable) {
+        failure(e)
+    }
+
+    suspend fun customerLogin(request: CustomerLoginRequest): Result<AuthResponse> = try {
+        val response = api.customerLogin(request)
+        if (response.success && response.token.isNotBlank()) {
+            RetrofitClient.setToken(response.token)
+            Result.Success(response)
+        } else {
+            Result.Error("Customer login failed", code = "invalid_credentials")
+        }
+    } catch (e: Throwable) {
+        failure(e)
+    }
+
+    suspend fun customerProfile(): Result<CustomerProfileResponse> = try {
+        Result.Success(api.customerProfile())
+    } catch (e: Throwable) {
+        failure(e)
+    }
+
+    suspend fun customerOrders(): Result<CustomerOrdersResponse> = try {
+        Result.Success(api.customerOrders())
+    } catch (e: Throwable) {
+        failure(e)
+    }
+
+    suspend fun customerTrack(orderNumber: String, phone: String): Result<CustomerTrackResponse> = try {
+        Result.Success(api.customerTrack(orderNumber, phone))
+    } catch (e: Throwable) {
+        failure(e)
+    }
+
+// ── Catalog ─────────────────────────────────────────────────────────────
 
     suspend fun getProducts(): Result<List<Product>> = try {
         val includeInactive = if (RetrofitClient.hasToken()) 1 else 0

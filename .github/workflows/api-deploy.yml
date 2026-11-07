@@ -252,7 +252,7 @@ jobs:
             || echo "::warning::branch_name is not the Mohammadpur profile yet — a custom value is intentionally preserved; check /api/v1/config."
 
           curl -sS --max-time 20 "$base/products" 2>/dev/null \
-            | grep -q 'abraar05.github.io/dxn-stockpoint/images/products' \
+            | grep -q 'abraar05.github.io/dxn-stockpoint-suites/images/products' \
             && echo "product photos present on the server ✔" \
             || echo "::warning::product photos not found on the server — check /api/v1/products."
 

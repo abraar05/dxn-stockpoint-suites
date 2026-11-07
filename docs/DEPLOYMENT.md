@@ -17,7 +17,7 @@ Total cost: **$0**. Services used:
 
 ## 0. What you need first
 
-- The repository pushed to `https://github.com/abraar05/dxn-stockpoint`.
+- The repository pushed to `https://github.com/abraar05/dxn-stockpoint-suites`.
 - An InfinityFree account (free signup, no card).
 - For CI deploys: **Settings → Secrets and variables → Actions**.
 
@@ -132,7 +132,7 @@ Verify:
 curl.exe https://dxn.10001mb.com/api/v1/health
 ```
 
-Expected: `{"success":true,"status":"ok","version":"2.1.2","driver":"mysql",...}`
+Expected: `{"success":true,"status":"ok","version":"3.1.1","driver":"mysql",...}`
 
 > If you see `database_unavailable`, the DB host/user/pass in `config.php` are
 > wrong — InfinityFree always uses `sqlNNN.infinityfree.com`, not `localhost`.
@@ -145,8 +145,9 @@ Already wired: `pages.yml` publishes `docs/` on every push that touches it.
 
 1. Repo → **Settings → Pages** → Source: **GitHub Actions**.
 2. Push to `main`, or run **Actions → Deploy web app → Run workflow**.
-3. Open <https://abraar05.github.io/dxn-stockpoint/>.
-4. **Settings → Connection** → paste `https://your-subdomain.infinityfreeapp.com`
+3. Open <https://abraar05.github.io/dxn-stockpoint-suites/>.
+4. **Settings → Connection** → paste `https://dxn.10001mb.com` (the production
+   shop API; already the default)
    → **Test connection** → **Save & sync**.
    The pill in the header turns green and reads **Live**.
 
@@ -162,13 +163,14 @@ catalogue.
 
 `build.yml` runs on every push that touches `android/`. It produces:
 
-- `dxn-stockpoint-2.1.0-debug.apk` — sideloadable, no signing setup needed
-- `dxn-stockpoint-2.1.0.aab` — for Google Play
+- `dxn-stockpoint-3.1.1-debug.apk` — sideloadable, no signing setup needed
+- `dxn-stockpoint-3.1.1.aab` — for Google Play
 
-Both are attached to the **v2.1.1** GitHub Release.
+Both are attached to the **v3.1.1** GitHub Release.
 
-> `v2.0.0` on this repo predates the PHP API rewrite and is kept only as
-> history. Ship `v2.1.1` — `versionCode 6` — from here on.
+> Without the four signing secrets the release artifacts are unsigned — the
+> `.apk` is still sideloadable but is **not** a Play Store release. Ship
+> `v3.1.1` — `versionCode 10` — from here on.
 
 ### Signed release (Play Store)
 
@@ -184,14 +186,14 @@ Both are attached to the **v2.1.1** GitHub Release.
 3. Add secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
    `ANDROID_KEY_ALIAS` (`dxn`), `ANDROID_KEY_PASSWORD`.
 
-4. Push a tag: `git tag v2.1.1; git push origin v2.1.1`
+4. Push a tag: `git tag v3.1.1; git push origin v3.1.1`
 
 ### Google Play
 
-1. Play Console → **Create app** → upload `dxn-stockpoint-2.1.1.aab`.
+1. Play Console → **Create app** → upload `dxn-stockpoint-3.1.1.aab`.
 2. Store listing needs: 512×512 icon, 1024×500 feature graphic, 2+ screenshots,
    short + full description, and a privacy policy URL — use
-   <https://abraar05.github.io/dxn-stockpoint/privacy.html>
+   <https://abraar05.github.io/dxn-stockpoint-suites/privacy.html>
    (source: [`PRIVACY_POLICY.md`](../PRIVACY_POLICY.md)).
 3. Data safety: no analytics, no ads, no third-party SDKs. Declare *collected –
    order management* for customer name/phone (optional fields the shopkeeper

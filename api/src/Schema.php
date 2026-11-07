@@ -377,7 +377,7 @@ final class Schema
     }
 
     /** Public location of the product photography bundled with the web app. */
-    private const IMAGE_BASE = 'https://abraar05.github.io/dxn-stockpoint/images/products/';
+    private const IMAGE_BASE = 'https://abraar05.github.io/dxn-stockpoint-suites/images/products/';
 
     /** Placeholder SKUs from the first catalogue release, retired in 2.1.2. */
     private const LEGACY_SKUS = [

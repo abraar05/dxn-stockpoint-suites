@@ -4,6 +4,7 @@
  */
 
 import { esc, money, int, round2, num, compact, relTime, toDate } from '../util.js';
+import { hasBase } from '../api.js';
 import { icon, emptyState, hydrateIcons, statusBadge, initials } from '../ui.js';
 import * as store from '../store.js';
 import { openCustomerAuth } from './account.js';

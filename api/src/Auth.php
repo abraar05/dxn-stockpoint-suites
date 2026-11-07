@@ -15,6 +15,7 @@ namespace DXN;
 final class Auth
 {
     public const ROLE_ADMIN = 'admin';
+    public const ROLE_CUSTOMER = 'customer';
 
     /** @var array<string,mixed>|null */
     private static ?array $claims = null;
@@ -48,6 +49,62 @@ final class Auth
             'role'       => self::ROLE_ADMIN,
             'ttl'        => $ttl,
         ];
+    }
+
+    public static function customerLogin(string $phone, string $password): array
+    {
+        self::guardCustomerBruteForce();
+
+        $account = Store::customerAccountByPhone($phone);
+        if ($account === null) {
+            Store::logCustomerAttempt(Request::ip(), false);
+            throw new ApiException('No account found with this phone', 401, 'invalid_credentials');
+        }
+
+        if (!password_verify($password, (string) $account['password_hash'])) {
+            Store::logCustomerAttempt(Request::ip(), false);
+            throw new ApiException('Incorrect password', 401, 'invalid_credentials');
+        }
+
+        Store::logCustomerAttempt(Request::ip(), true);
+
+        return self::customerSession($account, Store::customer((int) $account['customer_id']));
+    }
+
+    /** Issues a customer bearer token for a freshly registered account. */
+    public static function customerSession(array $account, ?array $customer): array
+    {
+        $ttl = (int) Config::get('token_ttl', 2592000);
+        $expires = time() + $ttl;
+
+        return [
+            'token' => self::sign([
+                'role'        => self::ROLE_CUSTOMER,
+                'account_id'  => (int) $account['id'],
+                'customer_id' => (int) $account['customer_id'],
+                'exp'         => $expires,
+            ]),
+            'expires_at' => gmdate('c', $expires),
+            'role'       => self::ROLE_CUSTOMER,
+            'ttl'        => $ttl,
+            'customer'   => $customer !== null ? Store::mapCustomer($customer) : null,
+        ];
+    }
+
+    public static function isCustomer(): bool
+    {
+        $claims = self::claims();
+        return $claims !== null && ($claims['role'] ?? null) === self::ROLE_CUSTOMER;
+    }
+
+    /** @return array<string,mixed> */
+    public static function requireCustomer(): array
+    {
+        $claims = self::claims();
+        if ($claims === null || ($claims['role'] ?? null) !== self::ROLE_CUSTOMER) {
+            throw new ApiException('Sign in with a customer account', 401, 'unauthorized');
+        }
+        return $claims;
     }
 
     public static function sign(array $claims): string
@@ -123,6 +180,18 @@ final class Auth
         );
         if ($failures >= 8) {
             throw new ApiException('Too many failed PIN attempts. Try again in 15 minutes.', 429, 'rate_limited');
+        }
+    }
+
+    private static function guardCustomerBruteForce(): void
+    {
+        $since = gmdate('Y-m-d H:i:s', time() - 900);
+        $failures = (int) Database::scalar(
+            'SELECT COUNT(*) FROM customer_auth_attempts WHERE ip = ? AND ok = 0 AND attempted_at >= ?',
+            [Request::ip(), $since]
+        );
+        if ($failures >= 8) {
+            throw new ApiException('Too many failed sign-in attempts. Try again in 15 minutes.', 429, 'rate_limited');
         }
     }
 

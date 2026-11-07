@@ -5,7 +5,7 @@ declare(strict_types=1);
  * DXN Stockpoint API — front controller.
  *
  * Everything is routed through this file (see .htaccess). Works on any PHP 8
- * host: InfinityFree, cPanel, a VPS, or `php -S localhost:8080 -t api/public`.
+ * host: ByetHost, cPanel, a VPS, or `php -S localhost:8080 -t api/public`.
  */
 
 $bootstrap = __DIR__ . '/../src/bootstrap.php';
@@ -40,6 +40,15 @@ $router->post('/api/v1/migrate', static fn () => HealthController::migrate());
 $router->post('/api/v1/auth/login', static fn () => AuthController::login());
 $router->get('/api/v1/auth/me', static fn () => AuthController::me());
 $router->post('/api/v1/auth/pin', static fn () => AuthController::changePin());
+$router->post('/api/v1/auth/register', static fn () => CustomerController::register());
+$router->post('/api/v1/auth/customer/login', static fn () => CustomerController::login());
+
+// ── Customer self-service ──────────────────────────────────────────────────
+$router->get('/api/v1/my/profile', static fn () => CustomerController::profile());
+$router->put('/api/v1/my/profile', static fn () => CustomerController::updateProfile());
+$router->patch('/api/v1/my/profile', static fn () => CustomerController::updateProfile());
+$router->get('/api/v1/my/orders', static fn () => CustomerController::myOrders());
+$router->get('/api/v1/my/track', static fn () => CustomerController::track());
 
 // ── Catalogue ───────────────────────────────────────────────────────────────
 $router->get('/api/v1/products', static fn () => CatalogController::index());
@@ -69,6 +78,8 @@ $router->get('/api/v1/orders', static fn () => OrderController::index());
 $router->post('/api/v1/orders', static fn () => OrderController::create());
 $router->get('/api/v1/orders/{id}', static fn (array $p) => OrderController::show($p));
 $router->post('/api/v1/orders/{id}/status', static fn (array $p) => OrderController::updateStatus($p));
+$router->post('/api/v1/orders/{id}/mark-paid', static fn (array $p) => OrderController::markPaid($p));
+$router->post('/api/v1/orders/{id}/return', static fn (array $p) => OrderController::returnOrder($p));
 $router->get('/api/v1/orders/{id}/receipt', static fn (array $p) => OrderController::receipt($p));
 
 // ── Customers, dashboard, reporting ─────────────────────────────────────────

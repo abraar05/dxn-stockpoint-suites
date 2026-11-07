@@ -110,12 +110,27 @@ final class Store
     /** @return array<int,array<string,mixed>> */
     public static function products(bool $includeInactive = false): array
     {
+        return self::productsPaginated(PHP_INT_MAX, 0, $includeInactive);
+    }
+
+    /** @return array<int,array<string,mixed>> */
+    public static function productsPaginated(int $limit = PHP_INT_MAX, int $offset = 0, bool $includeInactive = false): array
+    {
         $sql = 'SELECT * FROM products';
         if (!$includeInactive) {
             $sql .= ' WHERE is_active = 1';
         }
-        $sql .= ' ORDER BY category, name';
+        $sql .= ' ORDER BY category, name LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
         return array_map([self::class, 'mapProduct'], Database::all($sql));
+    }
+
+    public static function productsCount(bool $includeInactive = false): int
+    {
+        $sql = 'SELECT COUNT(*) FROM products';
+        if (!$includeInactive) {
+            $sql .= ' WHERE is_active = 1';
+        }
+        return (int) Database::scalar($sql);
     }
 
     /** @return array<string,mixed>|null */
@@ -232,12 +247,22 @@ final class Store
     /** @return array<int,array<string,mixed>> */
     public static function orders(array $filters = []): array
     {
+        return self::ordersPaginated($filters);
+    }
+
+    /** @return array<int,array<string,mixed>> */
+    public static function ordersPaginated(array $filters = []): array
+    {
         $where = [];
         $params = [];
 
         if (!empty($filters['status'])) {
             $where[] = 'status = ?';
             $params[] = $filters['status'];
+        }
+        if (!empty($filters['customer_id'])) {
+            $where[] = 'customer_id = ?';
+            $params[] = (int) $filters['customer_id'];
         }
         if (isset($filters['since_rev'])) {
             $where[] = 'rev > ?';
@@ -263,9 +288,9 @@ final class Store
         }
         $sql .= ' ORDER BY created_at DESC, id DESC';
 
-        $limit = (int) ($filters['limit'] ?? 50);
-        $limit = max(1, min($limit, 500));
-        $sql .= ' LIMIT ' . $limit;
+        $limit = max(1, min((int) ($filters['limit'] ?? 50), 500));
+        $offset = max(0, (int) ($filters['offset'] ?? 0));
+        $sql .= ' LIMIT ' . $limit . ' OFFSET ' . $offset;
 
         $rows = Database::all($sql, $params);
         if ($rows === []) {
@@ -284,6 +309,41 @@ final class Store
             static fn (array $row): array => self::mapOrder($row, $grouped[(int) $row['id']] ?? []),
             $rows
         );
+    }
+
+    public static function ordersCount(array $filters = []): int
+    {
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['status'])) {
+            $where[] = 'status = ?';
+            $params[] = $filters['status'];
+        }
+        if (!empty($filters['customer_id'])) {
+            $where[] = 'customer_id = ?';
+            $params[] = (int) $filters['customer_id'];
+        }
+        if (!empty($filters['from'])) {
+            $where[] = 'created_at >= ?';
+            $params[] = $filters['from'];
+        }
+        if (!empty($filters['to'])) {
+            $where[] = 'created_at <= ?';
+            $params[] = $filters['to'];
+        }
+        if (!empty($filters['q'])) {
+            $where[] = '(customer_name LIKE ? OR order_number LIKE ? OR dxn_member_id LIKE ?)';
+            $like = '%' . $filters['q'] . '%';
+            array_push($params, $like, $like, $like);
+        }
+
+        $sql = 'SELECT COUNT(*) FROM orders';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        return (int) Database::scalar($sql, $params);
     }
 
     /** @return array<string,mixed>|null */
@@ -348,6 +408,26 @@ final class Store
         $sql .= ' LIMIT ' . max(1, min((int) ($filters['limit'] ?? 200), 1000));
 
         return array_map([self::class, 'mapCustomer'], Database::all($sql, $params));
+    }
+
+    public static function customer(int $id): ?array
+    {
+        return Database::one('SELECT * FROM customers WHERE id = ?', [$id]);
+    }
+
+    public static function customerByPhone(string $phone): ?array
+    {
+        return Database::one('SELECT * FROM customers WHERE phone = ? ORDER BY id ASC LIMIT 1', [$phone]);
+    }
+
+    public static function customerAccount(int $id): ?array
+    {
+        return Database::one('SELECT * FROM customer_accounts WHERE id = ?', [$id]);
+    }
+
+    public static function customerAccountByPhone(string $phone): ?array
+    {
+        return Database::one('SELECT * FROM customer_accounts WHERE phone = ?', [$phone]);
     }
 
     public static function touchCustomer(?int $customerId, string $name, ?string $phone, ?string $memberId, bool $isMember, float $amount, float $pv): ?int
@@ -422,6 +502,19 @@ final class Store
         // Keep the table small on shared hosting.
         if (random_int(1, 25) === 1) {
             Database::run('DELETE FROM auth_attempts WHERE attempted_at < ?', [gmdate('Y-m-d H:i:s', time() - 604800)]);
+        }
+    }
+
+    public static function logCustomerAttempt(string $ip, bool $ok): void
+    {
+        Database::run(
+            'INSERT INTO customer_auth_attempts (ip, ok, attempted_at) VALUES (?, ?, ?)',
+            [$ip, $ok ? 1 : 0, Util::now()]
+        );
+
+        // Keep the table small on shared hosting.
+        if (random_int(1, 25) === 1) {
+            Database::run('DELETE FROM customer_auth_attempts WHERE attempted_at < ?', [gmdate('Y-m-d H:i:s', time() - 604800)]);
         }
     }
 

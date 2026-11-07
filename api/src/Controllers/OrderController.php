@@ -21,13 +21,29 @@ final class OrderController
     {
         Auth::requireAdmin();
 
-        $orders = Store::orders([
-            'limit'  => Util::int(Request::query('limit', 50), 50),
+        $page   = max(1, Util::int(Request::query('page', 1), 1));
+        $perPage = max(1, min(Util::int(Request::query('per_page', Request::query('limit', 50)), 50), 200));
+        $offset = ($page - 1) * $perPage;
+
+        $orders = Store::ordersPaginated([
+            'limit'  => $perPage,
+            'offset' => $offset,
+            'status' => Request::query('status'),
+            'q'      => Request::query('q'),
+        ]);
+        $total = Store::ordersCount([
             'status' => Request::query('status'),
             'q'      => Request::query('q'),
         ]);
 
-        Response::ok(['orders' => $orders, 'count' => count($orders)]);
+        Response::ok([
+            'orders'  => $orders,
+            'count'   => count($orders),
+            'total'   => $total,
+            'page'    => $page,
+            'per_page'=> $perPage,
+            'pages'   => (int) ceil($total / $perPage),
+        ]);
     }
 
     public static function show(array $params): void
@@ -47,7 +63,27 @@ final class OrderController
         }
 
         $payload = Request::json();
+
+        // A signed-in customer's order is linked automatically, even if the
+        // client did not send customer_id (the web checkout does not need to).
+        $linkedCustomerId = 0;
+        $linkedCustomer = null;
+        if (Auth::isCustomer()) {
+            $claims = Auth::requireCustomer();
+            $linkedCustomerId = (int) ($claims['customer_id'] ?? 0);
+            if ($linkedCustomerId > 0) {
+                $linkedCustomer = Store::customer($linkedCustomerId);
+            }
+        }
+
         $customerName = Util::clean($payload['customer_name'] ?? '', 160);
+        if ($customerName === '' && $linkedCustomer !== null) {
+            $customerName = (string) $linkedCustomer['name'];
+        }
+        $phone = Util::clean($payload['customer_phone'] ?? '', 40);
+        if ($phone === '' && $linkedCustomer !== null) {
+            $phone = (string) ($linkedCustomer['phone'] ?? '');
+        }
         $items = $payload['items'] ?? [];
 
         if ($customerName === '') {
@@ -65,10 +101,12 @@ final class OrderController
             }
         }
 
-        [$order, $warning] = Database::transaction(static function () use ($payload, $customerName, $items, $clientUuid): array {
+        [$order, $warning] = Database::transaction(static function () use ($payload, $customerName, $items, $clientUuid, $linkedCustomerId, $linkedCustomer, $phone): array {
             $isMember = Util::bool($payload['is_member'] ?? false) === 1;
             $memberId = Util::clean($payload['dxn_member_id'] ?? '', 40);
-            $phone = Util::clean($payload['customer_phone'] ?? '', 40);
+            if ($memberId === '' && $linkedCustomer !== null) {
+                $memberId = (string) ($linkedCustomer['dxn_member_id'] ?? '');
+            }
             $discount = max(0.0, Util::money($payload['discount'] ?? 0));
             $warning = null;
 
@@ -141,9 +179,17 @@ final class OrderController
             $rev = Store::nextRev();
             $now = Util::now();
             $orderNumber = Util::orderNumber();
+            $paymentMethod = strtoupper(Util::clean($payload['payment_method'] ?? 'CASH', 24) ?: 'CASH');
+            $status = in_array($paymentMethod, ['CASH', 'CARD', 'BKASH', 'NAGAD', 'WALLET'], true)
+                ? 'PAID'
+                : 'CONFIRMED';
+
+            $customerId = $linkedCustomerId > 0
+                ? $linkedCustomerId
+                : (isset($payload['customer_id']) ? Util::int($payload['customer_id']) : null);
 
             $customerId = Store::touchCustomer(
-                isset($payload['customer_id']) ? Util::int($payload['customer_id']) : null,
+                $customerId,
                 $customerName,
                 $phone !== '' ? $phone : null,
                 $memberId !== '' ? $memberId : null,
@@ -169,8 +215,8 @@ final class OrderController
                     $discount,
                     $total,
                     $totalPv,
-                    'CONFIRMED',
-                    Util::clean($payload['payment_method'] ?? 'CASH', 24),
+                    $status,
+                    $paymentMethod,
                     isset($payload['note']) ? Util::clean($payload['note'], 500) : null,
                     Util::clean($payload['source'] ?? 'web', 24),
                     $now,
@@ -215,7 +261,7 @@ final class OrderController
         Auth::requireAdmin();
         $id = (int) $params['id'];
         $status = strtoupper(Util::clean(Request::input('status', ''), 24));
-        $allowed = ['PENDING', 'CONFIRMED', 'PACKED', 'DELIVERED', 'CANCELLED'];
+        $allowed = ['PENDING', 'CONFIRMED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PAID', 'CANCELLED'];
 
         if (!in_array($status, $allowed, true)) {
             Response::error('status must be one of: ' . implode(', ', $allowed), 422, 'validation_error');
@@ -237,7 +283,72 @@ final class OrderController
         Response::ok(['message' => 'Order status updated', 'order' => Store::order($id)]);
     }
 
+    /** Confirms payment for an order without changing fulfilment status history. */
+    public static function markPaid(array $params): void
+    {
+        Auth::requireAdmin();
+        $id = (int) $params['id'];
+        $order = Store::order($id);
+        if ($order === null) {
+            Response::error('Order not found', 404, 'not_found');
+        }
+        if ($order['status'] === 'PAID') {
+            Response::ok(['message' => 'Order is already marked paid', 'order' => $order]);
+        }
+
+        Database::run(
+            'UPDATE orders SET status = ?, updated_at = ?, rev = ? WHERE id = ?',
+            ['PAID', Util::now(), Store::nextRev(), $id]
+        );
+        Store::audit('status_changed', 'order', (string) $id, 'payment confirmed');
+
+        Response::ok(['message' => 'Payment confirmed', 'order' => Store::order($id)]);
+    }
+
     /** Plain-text receipt, handy for printing from a phone or headless device. */
+    /** Refund a confirmed order: restores stock and marks it RETURNED. Idempotent. */
+    public static function returnOrder(array $params): void
+    {
+        Auth::requireAdmin();
+        $id = (int) $params['id'];
+        $order = Store::order($id);
+        if ($order === null) {
+            Response::error('Order not found', 404, 'not_found');
+        }
+        if ($order['status'] === 'RETURNED') {
+            Response::ok(['message' => 'Order already returned', 'order' => $order]);
+        }
+        if (!in_array($order['status'], ['CONFIRMED', 'PACKED', 'PAID', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERED'], true)) {
+            Response::error('Only confirmed, packed or delivered orders can be returned', 422, 'invalid_status');
+        }
+
+        [$order, $warning] = Database::transaction(static function () use ($id): array {
+            $rev = Store::nextRev();
+            $now = Util::now();
+
+            Database::run(
+                'UPDATE orders SET status = ?, updated_at = ?, rev = ? WHERE id = ?',
+                ['RETURNED', $now, $rev, $id]
+            );
+
+            // Restore stock for every line item.
+            foreach ($order['items'] as $item) {
+                Store::applyStockDelta(
+                    (int) $item['product_id'],
+                    (int) $item['quantity'],
+                    'return',
+                    $id
+                );
+            }
+
+            Store::audit('order_returned', 'order', (string) $id, "restored stock for " . count($order['items']) . " line(s)");
+
+            return [Store::order($id), null];
+        });
+
+        Response::ok(['message' => 'Order returned and stock restored', 'order' => $order, 'warning' => $warning]);
+    }
+
     public static function receipt(array $params): void
     {
         Auth::requireAdmin();

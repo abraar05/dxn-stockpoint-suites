@@ -6,6 +6,7 @@ namespace DXN\Controllers;
 use DXN\Auth;
 use DXN\Request;
 use DXN\Response;
+use DXN\Store;
 use DXN\Util;
 
 final class AuthController
@@ -24,8 +25,18 @@ final class AuthController
     /** Lets clients check whether a stored token is still valid. */
     public static function me(): void
     {
+        if (Auth::isCustomer()) {
+            $claims = Auth::requireCustomer();
+            $customer = Store::customer((int) $claims['customer_id']);
+            Response::ok([
+                'role'     => Auth::ROLE_CUSTOMER,
+                'scope'    => 'customer',
+                'customer' => $customer !== null ? Store::mapCustomer($customer) : null,
+            ]);
+        }
+
         Auth::requireAdmin();
-        Response::ok(['role' => Auth::ROLE_ADMIN]);
+        Response::ok(['role' => Auth::ROLE_ADMIN, 'scope' => 'admin']);
     }
 
     /** Changes the shop PIN. Requires the current PIN or the admin key. */

@@ -34,10 +34,24 @@ final class SettingsController
         }
 
         Response::ok([
-            'settings' => Store::settings() + $public,
+            'settings' => self::adminSettings(),
             'public'   => $public,
             'rev'      => Store::currentRev(),
         ]);
+    }
+
+    /** Admin-visible settings, with secrets that clients never need removed. */
+    private static function adminSettings(): array
+    {
+        $settings = Store::settings();
+        unset(
+            $settings['admin_pin_hash'],
+            $settings['steadfast_api_key'],
+            $settings['steadfast_secret_key'],
+            $settings['steadfast_webhook_token'],
+        );
+
+        return $settings + Store::publicSettings();
     }
 
     public static function update(): void
@@ -67,7 +81,7 @@ final class SettingsController
 
         Response::ok([
             'message'  => 'Settings saved',
-            'settings' => Store::settings() + Store::publicSettings(),
+            'settings' => self::adminSettings(),
             'public'   => Store::publicSettings(),
         ]);
     }

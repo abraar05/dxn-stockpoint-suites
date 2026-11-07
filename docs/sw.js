@@ -5,7 +5,7 @@
  * responses (different origin) so sync always talks to the real server.
  */
 
-const VERSION = 'dxn-stockpoint-3.0.0-r3';
+const VERSION = 'dxn-stockpoint-3.0.0-r6';
 const SHELL = [
   './',
   './index.html',
@@ -83,8 +83,17 @@ const SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(VERSION).then((cache) =>
-      // One missing file must not abort the whole install.
-      Promise.all(SHELL.map((url) => cache.add(url).catch(() => null))),
+      // Fetch with `reload` so a version bump never re-precaches stale HTTP-cached
+      // modules. One missing file must not abort the whole install.
+      Promise.all(SHELL.map(async (url) => {
+        try {
+          const target = new URL(url, self.registration.scope).href;
+          const response = await fetch(target, { cache: 'reload', credentials: 'same-origin' });
+          if (response && response.ok) await cache.put(target, response);
+        } catch {
+          /* ignore missing shell entry */
+        }
+      })),
     ).then(() => self.skipWaiting()),
   );
 });

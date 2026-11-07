@@ -1,4 +1,4 @@
-# Mohammadpur Stock Point v3.0.0 🛒
+# Mohammadpur Stock Point v3.1.1 🛒
 
 An offline-first point of sale for a DXN distributor stockpoint — **one API,
 three run paths, two clients that stay in sync**: a web PWA and a native
@@ -6,9 +6,9 @@ Android app. Sell with no internet, sync the moment you have it.
 
 | | |
 |---|---|
-| 🌐 Web app (live) | https://deskamarx.github.io/dxn-stockpoint/ |
-| 📱 Android APK | https://github.com/deskamarx/dxn-stockpoint/releases/tag/v3.0.0 |
-| 🖥️ Repo | https://github.com/deskamarx/dxn-stockpoint |
+| 🌐 Web app (live) | https://abraar05.github.io/dxn-stockpoint-suites/ |
+| 📱 Android APK | https://github.com/abraar05/dxn-stockpoint-suites/releases/tag/v3.1.1 |
+| 🖥️ Repo | https://github.com/abraar05/dxn-stockpoint-suites |
 | 🔒 Privacy | docs/privacy.html on any deployment |
 
 ```

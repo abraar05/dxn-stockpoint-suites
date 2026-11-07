@@ -2,7 +2,7 @@
 
 **Last updated:** 1 November 2026
 **Applies to:** the Android app (`com.dxn.stockpoint`) and the web app at
-<https://abraar05.github.io/dxn-stockpoint/>
+<https://abraar05.github.io/dxn-stockpoint-suites/>
 
 Mohammadpur Stock Point is a point-of-sale and stock-control tool for a single DXN
 distributor's shop. It is not a consumer social app: it records the sales the
@@ -95,10 +95,10 @@ issued token at once.
 
 Material changes to this policy will be committed to this repository, so the
 history at
-<https://github.com/abraar05/dxn-stockpoint/commits/main/PRIVACY_POLICY.md>
+<https://github.com/abraar05/dxn-stockpoint-suites/commits/main/PRIVACY_POLICY.md>
 is the record of what changed and when.
 
 ## 9. Contact
 
 Questions, corrections or a data request:
-<https://github.com/abraar05/dxn-stockpoint/issues>
+<https://github.com/abraar05/dxn-stockpoint-suites/issues>

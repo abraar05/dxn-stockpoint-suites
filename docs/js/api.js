@@ -7,7 +7,7 @@
  */
 
 const BASE_KEY = 'dxn.apiBase.v2';
-const DEFAULT_BASE = '';
+const DEFAULT_BASE = 'https://dxn.10001mb.com'; // production shop API
 const TOKEN_KEY = 'dxn.token.v2';
 const TOKEN_META_KEY = 'dxn.tokenMeta.v2';
 

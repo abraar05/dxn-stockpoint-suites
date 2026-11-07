@@ -100,7 +100,7 @@ jobs:
             **Install the APK:** `dxn-stockpoint-3.1.1.apk` (signed; if absent,
             the `-debug` build sideloads the same way).
 
-            **Web suite:** https://deskamarx.github.io/dxn-stockpoint/suite.html
+            **Web suite:** https://abraar05.github.io/dxn-stockpoint-suites/suite.html
             **Live API:** https://dxn.10001mb.com/api/v1/health
             3. Unlock Admin with the shop PIN to manage stock and orders
           files: dist/*

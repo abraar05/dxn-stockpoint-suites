@@ -72,14 +72,14 @@ fun SettingsScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("🌐 Server Configuration", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DarkText)
                         Text(
-                            "Set the URL of your local backend or Cloudflare/Ngrok tunnel.",
+                            "Connects to the live shop API by default — change it only if\nyou run your own backend or a tunnel.",
                             fontSize = 12.sp, color = Color.Gray
                         )
                         OutlinedTextField(
                             value = serverUrl,
                             onValueChange = { serverUrl = it; urlSaved = false },
                             label = { Text("Base URL") },
-                            placeholder = { Text("http://10.0.2.2:3000/") },
+                            placeholder = { Text("https://dxn.10001mb.com/") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
@@ -103,7 +103,7 @@ fun SettingsScreen(
                         }
                         Text(
                             "💡 Tip: the built-in default connects to the live shop API\n" +
-                            "(https://dxn.infy.click/). For local development, point this\n" +
+                            "(https://dxn.10001mb.com/). For local development, point this\n" +
                             "at a tunnel or the emulator loopback instead.",
                             fontSize = 11.sp, color = Color.Gray
                         )
@@ -188,7 +188,7 @@ fun SettingsScreen(
                         )
                         Text("Ph. 01939994578", fontSize = 12.sp, color = DarkText.copy(alpha = 0.75f))
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text("Version 2.1.0", fontSize = 12.sp, color = Color.Gray)
+                        Text("Version 3.1.1", fontSize = 12.sp, color = Color.Gray)
                         Text(
                             "Offline-first POS, inventory and PV tracking for the shop.",
                             fontSize = 12.sp,

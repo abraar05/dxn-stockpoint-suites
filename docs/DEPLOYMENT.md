@@ -90,12 +90,12 @@ The workflow lints every PHP file, boots the API against a throwaway SQLite
 database, runs a smoke suite, and only then mirrors:
 
 ```
-dxn.infy.click/htdocs/api/index.php     ← api/public/index.php
-dxn.infy.click/htdocs/api/install.php   ← api/public/install.php
-dxn.infy.click/htdocs/api/.htaccess     ← api/public/.htaccess
-dxn.infy.click/htdocs/api/src/**       ← api/src/**
-dxn.infy.click/htdocs/api/config/**    ← api/config/**   (config.php excluded)
-dxn.infy.click/htdocs/api/storage/**   ← api/storage/**  (guard file only)
+dxn.10001mb.com/htdocs/api/index.php     ← api/public/index.php
+dxn.10001mb.com/htdocs/api/install.php   ← api/public/install.php
+dxn.10001mb.com/htdocs/api/.htaccess     ← api/public/.htaccess
+dxn.10001mb.com/htdocs/api/src/**       ← api/src/**
+dxn.10001mb.com/htdocs/api/config/**    ← api/config/**   (config.php excluded)
+dxn.10001mb.com/htdocs/api/storage/**   ← api/storage/**  (guard file only)
 ```
 
 > PowerShell FTP alternative: `WinSCP` or `FTP-Deploy-Action` locally; the
@@ -103,7 +103,7 @@ dxn.infy.click/htdocs/api/storage/**   ← api/storage/**  (guard file only)
 
 ### Option B — manual
 
-Upload the same four folders into `dxn.infy.click/htdocs/api/` with FileZilla.
+Upload the same four folders into `dxn.10001mb.com/htdocs/api/` with FileZilla.
 Keep `config.php`, `installed.lock`, and all storage/database files on the server.
 
 ---
@@ -113,7 +113,7 @@ Keep `config.php`, `installed.lock`, and all storage/database files on the serve
 Open in a browser:
 
 ```
-https://dxn.infy.click/api/install.php?key=<install_key>
+https://dxn.10001mb.com/api/install.php?key=<install_key>
 ```
 
 For a new installation it creates tables, seeds the 51-item approved catalog,
@@ -129,7 +129,7 @@ shop PIN.
 Verify:
 
 ```powershell
-curl.exe https://dxn.infy.click/api/v1/health
+curl.exe https://dxn.10001mb.com/api/v1/health
 ```
 
 Expected: `{"success":true,"status":"ok","version":"2.1.2","driver":"mysql",...}`

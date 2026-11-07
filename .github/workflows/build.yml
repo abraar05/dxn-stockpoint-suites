@@ -100,7 +100,7 @@ jobs:
             **Shop server:** run `npm start` - API + web on one address.
 
             ### What is in this build
-            - Connects out of the box - the live shop API (dxn.infy.click) is the built-in default; change it any time in Settings
+            - Connects out of the box - the live shop API (dxn.10001mb.com) is the built-in default; change it any time in Settings
             - Rebuilt web PWA: dashboard, POS, orders, inventory, customers, reports, tabbed settings, search palette, themes
             - Zero-dependency Node shop server (server/) with JSON persistence, or the PHP 8 + MySQL API for shared hosting
             - Changed APK icon and splash artwork

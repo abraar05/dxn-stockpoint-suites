@@ -26,6 +26,9 @@ object Prefs {
     private const val LEGACY_BASE_URL = "http://10.0.2.2:8099/"
     private const val LEGACY_WA_PHONE = "8801987851131"
 
+    /** Dead first-generation host. Installs that saved it must move to the live API. */
+    private const val DEAD_HOST = "dxn.infy.click"
+
     private var prefs: SharedPreferences? = null
 
     fun init(context: Context) {
@@ -40,10 +43,18 @@ object Prefs {
     var baseUrl: String
         get() {
             val stored = p().getString(KEY_BASE_URL, null) ?: return DEFAULT_BASE_URL
+            // Emulator-loopback default from older builds — move to the live API.
             if (stored == LEGACY_BASE_URL) {
-                // Emulator-loopback default from older builds — move to the live API.
                 p().edit().putString(KEY_BASE_URL, DEFAULT_BASE_URL).apply()
                 return DEFAULT_BASE_URL
+            }
+            // Any install still aimed at the dead infy.click host gets re-pointed
+            // in place, whatever scheme/path/trailing-slash it was saved with.
+            if (stored.contains(DEAD_HOST)) {
+                val migrated = stored.replace(DEAD_HOST, "dxn.10001mb.com")
+                    .let { if (it.startsWith("http://")) "https://" + it.substring(7) else it }
+                p().edit().putString(KEY_BASE_URL, migrated).apply()
+                return migrated
             }
             return stored
         }

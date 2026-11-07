@@ -150,7 +150,7 @@ jobs:
             echo "::warning::FTP secrets are not configured; skipping FTP upload. The API was deployed manually. Add FTP_SERVER, FTP_USERNAME, and FTP_PASSWORD repository Actions secrets to enable automatic uploads."
           fi
 
-      # dxn.infy.click/htdocs/api/index.php + install.php + .htaccess
+      # dxn.10001mb.com/htdocs/api/index.php + install.php + .htaccess
       - name: Upload front controller
         if: steps.ftp_credentials.outputs.ready == 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -161,13 +161,13 @@ jobs:
           port: 21
           protocol: ftp
           local-dir: ./api/public/
-          server-dir: /dxn.infy.click/htdocs/api/
+          server-dir: /dxn.10001mb.com/htdocs/api/
           state-name: .ftp-state-public.json
           exclude: |
             **/.ftp-state*.json
             **/router.php
 
-      # dxn.infy.click/htdocs/api/src/**
+      # dxn.10001mb.com/htdocs/api/src/**
       - name: Upload application source
         if: steps.ftp_credentials.outputs.ready == 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -178,10 +178,10 @@ jobs:
           port: 21
           protocol: ftp
           local-dir: ./api/src/
-          server-dir: /dxn.infy.click/htdocs/api/src/
+          server-dir: /dxn.10001mb.com/htdocs/api/src/
           state-name: .ftp-state-src.json
 
-      # dxn.infy.click/htdocs/api/config/** — config.php is created once on the host and must
+      # dxn.10001mb.com/htdocs/api/config/** — config.php is created once on the host and must
       # never be overwritten by CI (it holds the MySQL password and HMAC secret).
       - name: Upload config scaffolding
         if: steps.ftp_credentials.outputs.ready == 'true'
@@ -193,7 +193,7 @@ jobs:
           port: 21
           protocol: ftp
           local-dir: ./api/config/
-          server-dir: /dxn.infy.click/htdocs/api/config/
+          server-dir: /dxn.10001mb.com/htdocs/api/config/
           state-name: .ftp-state-config.json
           exclude: |
             **/config.php
@@ -210,7 +210,7 @@ jobs:
           port: 21
           protocol: ftp
           local-dir: ./api/storage/
-          server-dir: /dxn.infy.click/htdocs/api/storage/
+          server-dir: /dxn.10001mb.com/htdocs/api/storage/
           state-name: .ftp-state-storage.json
           exclude: |
             **/*.sqlite
@@ -221,7 +221,7 @@ jobs:
       - name: Install & verify the production database
         if: steps.ftp_credentials.outputs.ready == 'true'
         env:
-          API_ORIGIN: https://dxn.infy.click
+          API_ORIGIN: https://dxn.10001mb.com
         run: |
           base="$API_ORIGIN/api/v1"
           check() { echo "$1: $2"; }

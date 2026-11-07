@@ -132,7 +132,7 @@ Verify:
 curl.exe https://dxn.10001mb.com/api/v1/health
 ```
 
-Expected: `{"success":true,"status":"ok","version":"3.1.1","driver":"mysql",...}`
+Expected: `{"success":true,"status":"ok","version":"2.2.0","driver":"mysql",...}`
 
 > If you see `database_unavailable`, the DB host/user/pass in `config.php` are
 > wrong — InfinityFree always uses `sqlNNN.infinityfree.com`, not `localhost`.

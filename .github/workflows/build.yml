@@ -95,7 +95,7 @@ jobs:
             API `https://dxn.10001mb.com`. Old installs auto-migrate on first launch.
 
             **Features**: customer accounts (register/login/profile/orders/tracking),
-            owner PIN admin panel, offline-first sync, 52-SKU DXN price list.
+            owner PIN admin panel, offline-first sync, 51-SKU DXN price list.
 
             **Install the APK:** `dxn-stockpoint-3.1.1.apk` (signed; if absent,
             the `-debug` build sideloads the same way).

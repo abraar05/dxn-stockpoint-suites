@@ -84,7 +84,7 @@ jobs:
 
             $health = $get("/health");
             $check("health returns success", is_array($health) && ($health["success"] ?? false) === true);
-            $check("health reports version 2.1.2", ($health["version"] ?? null) === "2.1.2");
+            $check("health reports version 2.2.0", ($health["version"] ?? null) === "2.2.0");
 
             $products = $get("/products");
             $check("catalogue is public", is_array($products) && ($products["success"] ?? false) === true);
